@@ -5,8 +5,10 @@ using Content.Server.Administration.Managers;
 using Content.Server.Afk;
 using Content.Server.Chat.Managers;
 using Content.Server.Connection;
+using Content.Server.Corvax.DiscordAuth;
 using Content.Server.Corvax.JoinQueue;
 using Content.Server.Corvax.Sponsors;
+using Content.Server.Corvax.TTS;
 using Content.Server.Database;
 using Content.Server.EUI;
 using Content.Server.GameTicking;
@@ -47,6 +49,7 @@ namespace Content.Server.Entry
         private ServerUpdateManager _updateManager = default!;
         private PlayTimeTrackingManager? _playTimeTracking;
         private IEntitySystemManager? _sysMan;
+        private IServerDbManager? _dbManager;
 
         /// <inheritdoc />
         public override void Init()
@@ -74,6 +77,7 @@ namespace Content.Server.Entry
             }
 
             prototypes.RegisterIgnore("parallax");
+            prototypes.RegisterIgnore("guideEntry");
 
             ServerContentIoC.Register();
 
@@ -95,20 +99,22 @@ namespace Content.Server.Entry
                 _updateManager = IoCManager.Resolve<ServerUpdateManager>();
                 _playTimeTracking = IoCManager.Resolve<PlayTimeTrackingManager>();
                 _sysMan = IoCManager.Resolve<IEntitySystemManager>();
+                _dbManager = IoCManager.Resolve<IServerDbManager>();
 
                 logManager.GetSawmill("Storage").Level = LogLevel.Info;
                 logManager.GetSawmill("db.ef").Level = LogLevel.Info;
 
                 IoCManager.Resolve<IAdminLogManager>().Initialize();
                 IoCManager.Resolve<IConnectionManager>().Initialize();
-                IoCManager.Resolve<IServerDbManager>().Init();
+                _dbManager.Init();
                 IoCManager.Resolve<IServerPreferencesManager>().Init();
                 IoCManager.Resolve<INodeGroupFactory>().Initialize();
-                IoCManager.Resolve<IGamePrototypeLoadManager>().Initialize();
-                IoCManager.Resolve<NetworkResourceManager>().Initialize();
+                IoCManager.Resolve<ContentNetworkResourceManager>().Initialize();
                 IoCManager.Resolve<GhostKickManager>().Initialize();
+                IoCManager.Resolve<DiscordAuthManager>().Initialize(); // Corvax-DiscordAuth
                 IoCManager.Resolve<SponsorsManager>().Initialize(); // Corvax-Sponsors
                 IoCManager.Resolve<JoinQueueManager>().Initialize(); // Corvax-Queue
+                IoCManager.Resolve<TTSManager>().Initialize(); // Corvax-TTS
                 IoCManager.Resolve<ServerInfoManager>().Initialize();
 
                 _voteManager.Initialize();
@@ -128,7 +134,7 @@ namespace Content.Server.Entry
             var dest = configManager.GetCVar(CCVars.DestinationFile);
             if (!string.IsNullOrEmpty(dest))
             {
-                var resPath = new ResourcePath(dest).ToRootedPath();
+                var resPath = new ResPath(dest).ToRootedPath();
                 var file = resourceManager.UserData.OpenWriteText(resPath.WithName("chem_" + dest));
                 ChemistryJsonGenerator.PublishJson(file);
                 file.Flush();
@@ -175,7 +181,7 @@ namespace Content.Server.Entry
         protected override void Dispose(bool disposing)
         {
             _playTimeTracking?.Shutdown();
-            _sysMan?.GetEntitySystemOrNull<StationSystem>()?.OnServerDispose();
+            _dbManager?.Shutdown();
         }
 
         private static void LoadConfigPresets(IConfigurationManager cfg, IResourceManager res, ISawmill sawmill)
@@ -202,7 +208,7 @@ namespace Content.Server.Entry
 
         private static void LoadBuildConfigPresets(IConfigurationManager cfg, IResourceManager res, ISawmill sawmill)
         {
-#if !FULL_RELEASE
+#if TOOLS
             Load(CCVars.ConfigPresetDevelopment, "development");
 #endif
 #if DEBUG

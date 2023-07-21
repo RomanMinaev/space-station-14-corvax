@@ -7,7 +7,6 @@ using Content.Shared.Maps;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Timing;
-using static Content.Shared.Disposal.Components.SharedDisposalUnitComponent;
 
 namespace Content.Server.Atmos.EntitySystems
 {
@@ -51,7 +50,7 @@ namespace Content.Server.Atmos.EntitySystems
             if (!TryComp(uid, out MapGridComponent? mapGridComp))
                 return true;
 
-            var mapUid = _mapManager.GetMapEntityIdOrThrow(Transform(((Component) mapGridComp).Owner).MapID);
+            var mapUid = _mapManager.GetMapEntityIdOrThrow(Transform(mapGridComp.Owner).MapID);
 
             var volume = GetVolumeForTiles(mapGridComp, 1);
 

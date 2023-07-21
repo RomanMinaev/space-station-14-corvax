@@ -37,12 +37,15 @@ SHARED_IGNORED_RESOURCES = {
 
 CLIENT_IGNORED_RESOURCES = {
     "Maps",
+    "ConfigPresets",
     "emotes.xml",
     "Groups",
+    "CorvaxSecretsServer", # Corvax-Secrets
     "engineCommandPerms.yml"
 }
 
 CLIENT_CONTENT_ASSEMBLIES = [
+    # IF YOU ADD SOMETHING HERE, ADD IT TO MANIFEST.YML TOO.
     "Content.Client",
     "Content.Shared",
     "Content.Shared.Database"

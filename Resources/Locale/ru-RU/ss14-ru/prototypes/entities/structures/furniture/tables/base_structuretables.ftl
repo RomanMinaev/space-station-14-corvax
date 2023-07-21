@@ -1,3 +1,4 @@
-ent-TableBase = table
-    .desc = A square piece of metal standing on four metal legs.
-    .suffix = { "" }
+ent-TableBase = стол
+    .desc = Квадратный лист металла, стоящий на четырех металлических ножках.
+ent-CounterBase = стойка
+    .desc = { ent-TableBase.desc }

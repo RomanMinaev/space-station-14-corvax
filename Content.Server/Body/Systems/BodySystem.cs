@@ -4,20 +4,22 @@ using Content.Server.Body.Components;
 using Content.Server.GameTicking;
 using Content.Server.Humanoid;
 using Content.Server.Kitchen.Components;
+using Content.Server.Mind;
 using Content.Server.Mind.Components;
-using Content.Server.MobState;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Part;
 using Content.Shared.Body.Prototypes;
 using Content.Shared.Body.Systems;
 using Content.Shared.Coordinates;
 using Content.Shared.Humanoid;
+using Content.Shared.Mobs.Systems;
 using Content.Shared.Movement.Events;
 using Content.Shared.Random.Helpers;
 using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.Player;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Server.Body.Systems;
 
@@ -25,9 +27,10 @@ public sealed class BodySystem : SharedBodySystem
 {
     [Dependency] private readonly GameTicker _ticker = default!;
     [Dependency] private readonly IGameTiming _gameTiming = default!;
-    [Dependency] private readonly HumanoidSystem _humanoidSystem = default!;
+    [Dependency] private readonly HumanoidAppearanceSystem _humanoidSystem = default!;
     [Dependency] private readonly MobStateSystem _mobState = default!;
     [Dependency] private readonly SharedAudioSystem _audio = default!;
+    [Dependency] private readonly MindSystem _mindSystem = default!;
 
     public override void Initialize()
     {
@@ -40,16 +43,14 @@ public sealed class BodySystem : SharedBodySystem
 
     private void OnRelayMoveInput(EntityUid uid, BodyComponent component, ref MoveInputEvent args)
     {
-        if (_mobState.IsDead(uid) &&
-            EntityManager.TryGetComponent<MindComponent>(uid, out var mind) &&
-            mind.HasMind)
+        if (_mobState.IsDead(uid) && _mindSystem.TryGetMind(uid, out var mind))
         {
-            if (!mind.Mind!.TimeOfDeath.HasValue)
+            if (!mind.TimeOfDeath.HasValue)
             {
-                mind.Mind.TimeOfDeath = _gameTiming.RealTime;
+                mind.TimeOfDeath = _gameTiming.RealTime;
             }
 
-            _ticker.OnGhostAttempt(mind.Mind!, true);
+            _ticker.OnGhostAttempt(mind, true);
         }
     }
 
@@ -83,7 +84,7 @@ public sealed class BodySystem : SharedBodySystem
             return false;
 
         if (part.Body is { } body &&
-            TryComp<HumanoidComponent>(body, out var humanoid))
+            TryComp<HumanoidAppearanceComponent>(body, out var humanoid))
         {
             var layer = part.ToHumanoidLayers();
             if (layer != null)
@@ -98,12 +99,14 @@ public sealed class BodySystem : SharedBodySystem
 
     public override bool DropPart(EntityUid? partId, BodyPartComponent? part = null)
     {
-        var oldBody = CompOrNull<BodyPartComponent>(partId)?.Body;
+        if (partId == null || !Resolve(partId.Value, ref part))
+            return false;
 
         if (!base.DropPart(partId, part))
             return false;
 
-        if (oldBody == null || !TryComp<HumanoidComponent>(oldBody, out var humanoid))
+        var oldBody = part.Body;
+        if (oldBody == null || !TryComp<HumanoidAppearanceComponent>(oldBody, out var humanoid))
             return true;
 
         var layer = part.ToHumanoidLayers();
@@ -136,9 +139,15 @@ public sealed class BodySystem : SharedBodySystem
         if (bodyId == null || !Resolve(bodyId.Value, ref body, false))
             return new HashSet<EntityUid>();
 
-        var gibs = base.GibBody(bodyId, gibOrgans, body, deleteItems);
+        if (LifeStage(bodyId.Value) >= EntityLifeStage.Terminating || EntityManager.IsQueuedForDeletion(bodyId.Value))
+            return new HashSet<EntityUid>();
 
         var xform = Transform(bodyId.Value);
+        if (xform.MapUid == null)
+            return new HashSet<EntityUid>();
+
+        var gibs = base.GibBody(bodyId, gibOrgans, body, deleteItems);
+
         var coordinates = xform.Coordinates;
         var filter = Filter.Pvs(bodyId.Value, entityManager: EntityManager);
         var audio = AudioParams.Default.WithVariation(0.025f);

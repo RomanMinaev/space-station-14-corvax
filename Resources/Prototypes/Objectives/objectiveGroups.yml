@@ -20,6 +20,7 @@
     CorgiMeatStealObjective: 1
     CaptainGunStealObjective: 0.5
     CaptainJetpackStealObjective: 0.5
+    HandTeleporterStealObjective: 0.5
 
 - type: weightedRandom
   id: TraitorObjectiveGroupKill
@@ -31,6 +32,7 @@
   weights:
     EscapeShuttleObjective: 1
     DieObjective: 0.05
+    HijackShuttleObjective: 0.02 # Corvax-Hijack
 
 - type: weightedRandom
   id: TraitorObjectiveGroupSocial

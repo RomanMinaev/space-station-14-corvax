@@ -2,8 +2,8 @@ using Content.Shared.Movement.Components;
 using Content.Shared.Movement.Systems;
 using Content.Shared.Pulling.Components;
 using Robust.Client.GameObjects;
+using Robust.Client.Physics;
 using Robust.Client.Player;
-using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Timing;
 
@@ -21,16 +21,51 @@ namespace Content.Client.Physics.Controllers
             SubscribeLocalEvent<RelayInputMoverComponent, PlayerDetachedEvent>(OnRelayPlayerDetached);
             SubscribeLocalEvent<InputMoverComponent, PlayerAttachedEvent>(OnPlayerAttached);
             SubscribeLocalEvent<InputMoverComponent, PlayerDetachedEvent>(OnPlayerDetached);
+
+            SubscribeLocalEvent<InputMoverComponent, UpdateIsPredictedEvent>(OnUpdatePredicted);
+            SubscribeLocalEvent<MovementRelayTargetComponent, UpdateIsPredictedEvent>(OnUpdateRelayTargetPredicted);
+            SubscribeLocalEvent<SharedPullableComponent, UpdateIsPredictedEvent>(OnUpdatePullablePredicted);
+        }
+
+        private void OnUpdatePredicted(EntityUid uid, InputMoverComponent component, ref UpdateIsPredictedEvent args)
+        {
+            // Enable prediction if an entity is controlled by the player
+            if (uid == _playerManager.LocalPlayer?.ControlledEntity)
+                args.IsPredicted = true;
+        }
+
+        private void OnUpdateRelayTargetPredicted(EntityUid uid, MovementRelayTargetComponent component, ref UpdateIsPredictedEvent args)
+        {
+            if (component.Source == _playerManager.LocalPlayer?.ControlledEntity)
+                args.IsPredicted = true;
+        }
+
+        private void OnUpdatePullablePredicted(EntityUid uid, SharedPullableComponent component, ref UpdateIsPredictedEvent args)
+        {
+            // Enable prediction if an entity is being pulled by the player.
+            // Disable prediction if an entity is being pulled by some non-player entity.
+
+            if (component.Puller == _playerManager.LocalPlayer?.ControlledEntity)
+                args.IsPredicted = true;
+            else if (component.Puller != null)
+                args.BlockPrediction = true;
+
+            // TODO recursive pulling checks?
+            // What if the entity is being pulled by a vehicle controlled by the player?
         }
 
         private void OnRelayPlayerAttached(EntityUid uid, RelayInputMoverComponent component, PlayerAttachedEvent args)
         {
+            Physics.UpdateIsPredicted(uid);
+            Physics.UpdateIsPredicted(component.RelayEntity);
             if (TryComp<InputMoverComponent>(component.RelayEntity, out var inputMover))
                 SetMoveInput(inputMover, MoveButtons.None);
         }
 
         private void OnRelayPlayerDetached(EntityUid uid, RelayInputMoverComponent component, PlayerDetachedEvent args)
         {
+            Physics.UpdateIsPredicted(uid);
+            Physics.UpdateIsPredicted(component.RelayEntity);
             if (TryComp<InputMoverComponent>(component.RelayEntity, out var inputMover))
                 SetMoveInput(inputMover, MoveButtons.None);
         }
@@ -53,21 +88,7 @@ namespace Content.Client.Physics.Controllers
                 return;
 
             if (TryComp<RelayInputMoverComponent>(player, out var relayMover))
-            {
-                if (relayMover.RelayEntity != null)
-                {
-                    if (TryComp<InputMoverComponent>(player, out var mover) &&
-                        TryComp<InputMoverComponent>(relayMover.RelayEntity, out var relayed))
-                    {
-                        relayed.CanMove = mover.CanMove;
-                        relayed.RelativeEntity = mover.RelativeEntity;
-                        relayed.RelativeRotation = mover.RelativeRotation;
-                        relayed.TargetRelativeRotation = mover.RelativeRotation;
-                    }
-
-                    HandleClientsideMovement(relayMover.RelayEntity.Value, frameTime);
-                }
-            }
+                HandleClientsideMovement(relayMover.RelayEntity, frameTime);
 
             HandleClientsideMovement(player, frameTime);
         }
@@ -75,15 +96,21 @@ namespace Content.Client.Physics.Controllers
         private void HandleClientsideMovement(EntityUid player, float frameTime)
         {
             var xformQuery = GetEntityQuery<TransformComponent>();
+            var moverQuery = GetEntityQuery<InputMoverComponent>();
+            var relayTargetQuery = GetEntityQuery<MovementRelayTargetComponent>();
+            var mobMoverQuery = GetEntityQuery<MobMoverComponent>();
+            var pullableQuery = GetEntityQuery<SharedPullableComponent>();
+            var modifierQuery = GetEntityQuery<MovementSpeedModifierComponent>();
 
-            if (!TryComp(player, out InputMoverComponent? mover) ||
+            if (!moverQuery.TryGetComponent(player, out var mover) ||
                 !xformQuery.TryGetComponent(player, out var xform))
             {
                 return;
             }
 
-            PhysicsComponent? body = null;
-            TransformComponent? xformMover = xform;
+            var physicsUid = player;
+            PhysicsComponent? body;
+            var xformMover = xform;
 
             if (mover.ToParent && HasComp<RelayInputMoverComponent>(xform.ParentUid))
             {
@@ -92,50 +119,28 @@ namespace Content.Client.Physics.Controllers
                 {
                     return;
                 }
+
+                physicsUid = xform.ParentUid;
             }
             else if (!TryComp(player, out body))
             {
                 return;
             }
 
-            // Essentially we only want to set our mob to predicted so every other entity we just interpolate
-            // (i.e. only see what the server has sent us).
-            // The exception to this is joints.
-            body.Predict = true;
-
-            // We set joints to predicted given these can affect how our mob moves.
-            // I would only recommend disabling this if you make pulling not use joints anymore (someday maybe?)
-
-            if (TryComp(player, out JointComponent? jointComponent))
-            {
-                foreach (var joint in jointComponent.GetJoints.Values)
-                {
-                    if (TryComp(joint.BodyAUid, out PhysicsComponent? physics))
-                        physics.Predict = true;
-
-                    if (TryComp(joint.BodyBUid, out physics))
-                        physics.Predict = true;
-                }
-            }
-
-            // If we're being pulled then we won't predict anything and will receive server lerps so it looks way smoother.
-            if (TryComp(player, out SharedPullableComponent? pullableComp))
-            {
-                if (pullableComp.Puller is {Valid: true} puller && TryComp<PhysicsComponent?>(puller, out var pullerBody))
-                {
-                    pullerBody.Predict = false;
-                    body.Predict = false;
-
-                    if (TryComp<SharedPullerComponent>(player, out var playerPuller) && playerPuller.Pulling != null &&
-                        TryComp<PhysicsComponent>(playerPuller.Pulling, out var pulledBody))
-                    {
-                        pulledBody.Predict = false;
-                    }
-                }
-            }
-
             // Server-side should just be handled on its own so we'll just do this shizznit
-            HandleMobMovement(mover, body, xformMover, frameTime, xformQuery);
+            HandleMobMovement(
+                player,
+                mover,
+                physicsUid,
+                body,
+                xformMover,
+                frameTime,
+                xformQuery,
+                moverQuery,
+                mobMoverQuery,
+                relayTargetQuery,
+                pullableQuery,
+                modifierQuery);
         }
 
         protected override bool CanSound()

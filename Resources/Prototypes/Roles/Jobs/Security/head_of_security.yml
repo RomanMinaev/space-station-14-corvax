@@ -7,11 +7,15 @@
     - !type:RoleTimeRequirement
       role: JobWarden
       time: 36000 # Corvax-RoleTime
+#    - !type:RoleTimeRequirement
+#      role: JobDetective
+#      time: 7200 #2 hrs
+#    - !type:RoleTimeRequirement
+#      role: JobSecurityOfficer
+#      time: 36000 #10 hrs
     - !type:DepartmentTimeRequirement
       department: Security
-      time: 54000 # Corvax-RoleTime
-#    - !type:OverallPlaytimeRequirement
-#      time: 108000
+      time: 108000 # Corvax-RoleTime
   weight: 10
   startingGear: HoSGear
   icon: "HeadOfSecurity"
@@ -27,13 +31,14 @@
   - Maintenance
   - Service
   - External
+  - Detective
 
 - type: startingGear
   id: HoSGear
   equipment:
     jumpsuit: ClothingUniformJumpsuitHoS
-    back: ClothingBackpackSecurityFilled
-    shoes: ClothingShoesBootsCombatFilled
+    back: ClothingBackpackHOSFilled
+    shoes: ClothingShoesBootsJackSec # Corvax-Resprite
     outerClothing: ClothingOuterCoatHoSTrench
     eyes: ClothingEyesGlassesSecurity
     head: ClothingHeadHatBeretHoS
@@ -41,6 +46,7 @@
     gloves: ClothingHandsGlovesCombat
     ears: ClothingHeadsetAltSecurity
     belt: ClothingBeltSecurityFilled
+    pocket1: WeaponPistolMk58Nonlethal
   innerclothingskirt: ClothingUniformJumpskirtHoS
-  satchel: ClothingBackpackSatchelSecurityFilled
-  duffelbag: ClothingBackpackDuffelSecurityFilled
+  satchel: ClothingBackpackSatchelHOSFilled
+  duffelbag: ClothingBackpackDuffelHOSFilled

@@ -1,12 +1,12 @@
 ent-MobSiliconBase = { "" }
     .desc = { "" }
-    .suffix = { "" }
 ent-MobHonkBot = honkbot
     .desc = Horrifying.
-    .suffix = { "" }
+ent-MobJonkBot = jonkbot
+    .desc = Horrifying.
 ent-MobCleanBot = cleanbot
     .desc = The creep of automation now threatening space janitors.
-    .suffix = { "" }
 ent-MobMedibot = medibot
     .desc = No substitute for a doctor, but better than nothing.
-    .suffix = { "" }
+ent-MobMimeBot = mimebot
+    .desc = Why not give mimebot a friendly wave.

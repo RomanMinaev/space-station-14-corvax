@@ -6,7 +6,7 @@
   components:
   - type: Sprite
     sprite: Structures/Machines/fax_machine.rsi
-    netsync: false
+    drawdepth: SmallObjects
     layers:
     - state: icon
       map: ["base"]
@@ -18,14 +18,15 @@
     bodyType: Static
   - type: Fixtures
     fixtures:
-    - shape:
-        !type:PhysShapeAabb
-        bounds: "-0.25,-0.25,0.25,0.25"
-      density: 25
-      mask:
-      - MachineMask
-      layer:
-      - MachineLayer
+      fix1:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.25,-0.25,0.25,0.25"
+        density: 25
+        mask:
+        - TabletopMachineMask
+        layer:
+        - TabletopMachineLayer
   - type: ActivatableUI
     key: enum.FaxUiKey.Key
   - type: ActivatableUIRequiresPower
@@ -104,3 +105,4 @@
     - type: FaxMachine
       name: "Captain's Office"
       receiveNukeCodes: true
+      receiveStationGoal: true # Corvax-StationGoal

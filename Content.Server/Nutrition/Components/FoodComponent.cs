@@ -1,4 +1,4 @@
-using System.Threading;
+using Content.Server.Body.Components;
 using Content.Server.Chemistry.EntitySystems;
 using Content.Server.Nutrition.EntitySystems;
 using Content.Shared.FixedPoint;
@@ -36,6 +36,25 @@ namespace Content.Server.Nutrition.Components
         public bool UtensilRequired = false;
 
         /// <summary>
+        ///     If this is set to true, eating this food will require you to have a stomach with a
+        ///     <see cref="StomachComponent.SpecialDigestible"/> that includes this entity in its whitelist,
+        ///     rather than just being digestible by anything that can eat food.
+        /// </summary>
+        /// <remarks>
+        ///     TODO think about making this a little more complex, right now you cant disallow mobs from eating stuff
+        ///     that everyone else can eat
+        /// </remarks>
+        [DataField("requiresSpecialDigestion")]
+        public bool RequiresSpecialDigestion = false;
+
+        /// <summary>
+        ///     Stomachs required to digest this entity.
+        ///     Used to simulate 'ruminant' digestive systems (which can digest grass)
+        /// </summary>
+        [DataField("requiredStomachs")]
+        public int RequiredStomachs = 1;
+
+        /// <summary>
         /// The localization identifier for the eat message. Needs a "food" entity argument passed to it.
         /// </summary>
         [DataField("eatMessage")]
@@ -54,12 +73,6 @@ namespace Content.Server.Nutrition.Components
         [DataField("forceFeedDelay")]
         public float ForceFeedDelay = 3;
 
-        /// <summary>
-        ///     Token for interrupting a do-after action (e.g., force feeding). If not null, implies component is
-        ///     currently "in use".
-        /// </summary>
-        public CancellationTokenSource? CancelToken;
-
         [ViewVariables]
         public int UsesRemaining
         {
@@ -71,11 +84,11 @@ namespace Content.Server.Nutrition.Components
                 }
 
                 if (TransferAmount == null)
-                    return solution.CurrentVolume == 0 ? 0 : 1;
+                    return solution.Volume == 0 ? 0 : 1;
 
-                return solution.CurrentVolume == 0
+                return solution.Volume == 0
                     ? 0
-                    : Math.Max(1, (int) Math.Ceiling((solution.CurrentVolume / (FixedPoint2)TransferAmount).Float()));
+                    : Math.Max(1, (int) Math.Ceiling((solution.Volume / (FixedPoint2)TransferAmount).Float()));
             }
         }
     }

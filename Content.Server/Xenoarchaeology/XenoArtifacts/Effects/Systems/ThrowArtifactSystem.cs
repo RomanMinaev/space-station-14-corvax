@@ -1,4 +1,6 @@
-﻿using Content.Server.Xenoarchaeology.XenoArtifacts.Effects.Components;
+﻿using System.Numerics;
+using Content.Server.Maps;
+using Content.Server.Xenoarchaeology.XenoArtifacts.Effects.Components;
 using Content.Server.Xenoarchaeology.XenoArtifacts.Events;
 using Content.Shared.Maps;
 using Content.Shared.Throwing;
@@ -13,6 +15,7 @@ public sealed class ThrowArtifactSystem : EntitySystem
     [Dependency] private readonly IRobustRandom _random = default!;
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly ThrowingSystem _throwing = default!;
+    [Dependency] private readonly TileSystem _tile = default!;
 
     /// <inheritdoc/>
     public override void Initialize()
@@ -26,14 +29,14 @@ public sealed class ThrowArtifactSystem : EntitySystem
         if (_map.TryGetGrid(xform.GridUid, out var grid))
         {
             var tiles = grid.GetTilesIntersecting(
-                Box2.CenteredAround(xform.WorldPosition, (component.Range*2, component.Range)));
+                Box2.CenteredAround(xform.WorldPosition, new Vector2(component.Range * 2, component.Range)));
 
             foreach (var tile in tiles)
             {
                 if (!_random.Prob(component.TilePryChance))
                     continue;
 
-                tile.PryTile();
+                _tile.PryTile(tile);
             }
         }
 

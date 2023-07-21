@@ -1,8 +1,8 @@
-using Content.Server.MobState;
 using Content.Server.NPC.Components;
 using Content.Server.NPC.HTN;
 using Content.Shared.CCVar;
-using Content.Shared.MobState;
+using Content.Shared.Mobs;
+using Content.Shared.Mobs.Systems;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
 using Robust.Shared.Configuration;
@@ -53,7 +53,7 @@ namespace Content.Server.NPC.Systems
 
         private void OnPlayerNPCDetach(EntityUid uid, NPCComponent component, PlayerDetachedEvent args)
         {
-            if (_mobState.IsIncapacitated(uid))
+            if (_mobState.IsIncapacitated(uid) || TerminatingOrDeleted(uid))
                 return;
 
             WakeNPC(uid, component);
@@ -83,9 +83,9 @@ namespace Content.Server.NPC.Systems
         /// <summary>
         /// Is the NPC awake and updating?
         /// </summary>
-        public bool IsAwake(NPCComponent component, ActiveNPCComponent? active = null)
+        public bool IsAwake(EntityUid uid, NPCComponent component, ActiveNPCComponent? active = null)
         {
-            return Resolve(component.Owner, ref active, false);
+            return Resolve(uid, ref active, false);
         }
 
         /// <summary>
@@ -98,8 +98,8 @@ namespace Content.Server.NPC.Systems
                 return;
             }
 
-            _sawmill.Debug($"Waking {ToPrettyString(component.Owner)}");
-            EnsureComp<ActiveNPCComponent>(component.Owner);
+            _sawmill.Debug($"Waking {ToPrettyString(uid)}");
+            EnsureComp<ActiveNPCComponent>(uid);
         }
 
         public void SleepNPC(EntityUid uid, NPCComponent? component = null)
@@ -109,8 +109,8 @@ namespace Content.Server.NPC.Systems
                 return;
             }
 
-            _sawmill.Debug($"Sleeping {ToPrettyString(component.Owner)}");
-            RemComp<ActiveNPCComponent>(component.Owner);
+            _sawmill.Debug($"Sleeping {ToPrettyString(uid)}");
+            RemComp<ActiveNPCComponent>(uid);
         }
 
         /// <inheritdoc />
@@ -131,13 +131,13 @@ namespace Content.Server.NPC.Systems
             if (HasComp<ActorComponent>(uid))
                 return;
 
-            switch (args.CurrentMobState)
+            switch (args.NewMobState)
             {
-                case DamageState.Alive:
+                case MobState.Alive:
                     WakeNPC(uid, component);
                     break;
-                case DamageState.Critical:
-                case DamageState.Dead:
+                case MobState.Critical:
+                case MobState.Dead:
                     SleepNPC(uid, component);
                     break;
             }

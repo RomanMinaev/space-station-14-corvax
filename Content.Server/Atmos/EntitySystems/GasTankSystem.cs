@@ -188,9 +188,12 @@ namespace Content.Server.Atmos.EntitySystems
 
         public void ConnectToInternals(GasTankComponent component)
         {
-            if (component.IsConnected || !CanConnectToInternals(component)) return;
+            if (component.IsConnected || !CanConnectToInternals(component))
+                return;
+
             var internals = GetInternalsComponent(component);
-            if (internals == null) return;
+            if (internals == null)
+                return;
 
             if (_internals.TryConnectTank(internals, component.Owner))
                 component.User = internals.Owner;
@@ -198,7 +201,8 @@ namespace Content.Server.Atmos.EntitySystems
             _actions.SetToggled(component.ToggleAction, component.IsConnected);
 
             // Couldn't toggle!
-            if (!component.IsConnected) return;
+            if (!component.IsConnected)
+                return;
 
             component.ConnectStream?.Stop();
 
@@ -259,7 +263,7 @@ namespace Content.Server.Atmos.EntitySystems
                 }
 
                 pressure = component.Air.Pressure;
-                var range = (pressure - component.TankFragmentPressure) / component.TankFragmentScale;
+                var range = MathF.Sqrt((pressure - component.TankFragmentPressure) / component.TankFragmentScale);
 
                 // Let's cap the explosion, yeah?
                 // !1984

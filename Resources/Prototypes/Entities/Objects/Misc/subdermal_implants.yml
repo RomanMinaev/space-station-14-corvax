@@ -57,6 +57,25 @@
         iconOn: Objects/Tools/flashlight.rsi/flashlight-on.png
         event: !type:ToggleActionEvent
 
+- type: entity
+  parent: BaseSubdermalImplant
+  id: BikeHornImplant
+  name: bike horn implant
+  description: Makes you honk
+  noSpawn: true
+  components:
+    - type: SubdermalImplant
+      implantAction: ActivateHonkImplant
+    - type: TriggerImplantAction
+    - type: EmitSoundOnTrigger
+      sound:
+        collection: BikeHorn
+        params:
+          variation: 0.125
+    - type: Tag
+      tags:
+      - BikeHorn
+
 #Security implants
 
 - type: entity
@@ -71,10 +90,11 @@
       randomMode: false
       controlsLocked: true
       mode: SensorCords
-      activationContainer: "ImplantContainer"
+      activationContainer: "implant"
     - type: DeviceNetwork
       deviceNetId: Wireless
       transmitFrequencyId: SuitSensor
+    - type: StationLimitedNetwork
     - type: WirelessNetworkConnection
       range: 500
 
@@ -111,6 +131,24 @@
   components:
     - type: SubdermalImplant
       implantAction: ActivateFreedomImplant
+
+- type: entity
+  parent: BaseSubdermalImplant
+  id: UplinkImplant
+  name: uplink implant
+  description: allows the user to open a hidden uplink at will
+  noSpawn: true
+  components:
+  - type: SubdermalImplant
+    implantAction: OpenUplinkImplant
+  - type: Store
+    preset: StorePresetUplink
+    balance:
+      Telecrystal: 0
+  - type: UserInterface
+    interfaces:
+    - key: enum.StoreUiKey.Key
+      type: StoreBoundUserInterface
 
 #Nuclear Operative/Special Exclusive implants
 
@@ -159,6 +197,8 @@
       delay: 7
       initialBeepDelay: 0
       beepSound: /Audio/Machines/Nuke/general_beep.ogg
+      params:
+        volume: -2
     - type: ExplodeOnTrigger
     - type: GibOnTrigger
       deleteItems: true

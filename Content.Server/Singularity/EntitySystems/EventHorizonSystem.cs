@@ -1,3 +1,5 @@
+using System.Numerics;
+using Content.Server.Administration.Logs;
 using Robust.Shared.Containers;
 using Robust.Shared.Timing;
 using Robust.Shared.Map;
@@ -8,9 +10,12 @@ using Content.Shared.Singularity.Components;
 using Content.Shared.Singularity.EntitySystems;
 
 using Content.Server.Ghost.Components;
+using Content.Server.Mind.Components;
 using Content.Server.Station.Components;
 using Content.Server.Singularity.Components;
 using Content.Server.Singularity.Events;
+using Content.Shared.Database;
+using Content.Shared.Tag;
 
 namespace Content.Server.Singularity.EntitySystems;
 
@@ -24,7 +29,9 @@ public sealed class EventHorizonSystem : SharedEventHorizonSystem
     [Dependency] private readonly EntityLookupSystem _lookup = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly IMapManager _mapMan = default!;
+    [Dependency] private readonly IAdminLogManager _adminLogger = default!;
     [Dependency] private readonly SharedContainerSystem _containerSystem = default!;
+    [Dependency] private readonly TagSystem _tagSystem = default!;
 #endregion Dependencies
 
     /// <summary>
@@ -123,8 +130,16 @@ public sealed class EventHorizonSystem : SharedEventHorizonSystem
     /// <param name="outerContainer">The innermost container of the entity to consume that isn't also being consumed by the event horizon.</param>
     public void ConsumeEntity(EntityUid uid, EventHorizonComponent eventHorizon, IContainer? outerContainer = null)
     {
+        var eventHorizonOwner = eventHorizon.Owner;
+
+        if (!EntityManager.IsQueuedForDeletion(uid) && // I saw it log twice a few times for some reason?
+            (HasComp<MindContainerComponent>(uid) ||
+             _tagSystem.HasTag(uid, "HighRiskItem") ||
+             HasComp<ContainmentFieldGeneratorComponent>(uid)))
+            _adminLogger.Add(LogType.EntityDelete, LogImpact.Extreme, $"{ToPrettyString(uid)} entered the event horizon of {ToPrettyString(eventHorizonOwner)} and was deleted");
+
         EntityManager.QueueDeleteEntity(uid);
-        RaiseLocalEvent(eventHorizon.Owner, new EntityConsumedByEventHorizonEvent(uid, eventHorizon, outerContainer));
+        RaiseLocalEvent(eventHorizonOwner, new EntityConsumedByEventHorizonEvent(uid, eventHorizon, outerContainer));
         RaiseLocalEvent(uid, new EventHorizonConsumedEntityEvent(uid, eventHorizon, outerContainer));
     }
 
@@ -248,9 +263,11 @@ public sealed class EventHorizonSystem : SharedEventHorizonSystem
     /// <param name="eventHorizon">The event horizon which is consuming the tiles on the grid.</param>
     public void ConsumeTiles(List<(Vector2i, Tile)> tiles, MapGridComponent grid, EventHorizonComponent eventHorizon)
     {
-        if (tiles.Count > 0)
-            RaiseLocalEvent(eventHorizon.Owner, new TilesConsumedByEventHorizonEvent(tiles, grid, eventHorizon));
-            grid.SetTiles(tiles);
+        if (tiles.Count <= 0)
+            return;
+
+        RaiseLocalEvent(eventHorizon.Owner, new TilesConsumedByEventHorizonEvent(tiles, grid, eventHorizon));
+        grid.SetTiles(tiles);
     }
 
     /// <summary>
@@ -369,12 +386,12 @@ public sealed class EventHorizonSystem : SharedEventHorizonSystem
     /// <param name="uid">The event horizon entity that is trying to collide with something.</param>
     /// <param name="comp">The event horizon that is trying to collide with something.</param>
     /// <param name="args">The event arguments.</param>
-    protected override sealed bool PreventCollide(EntityUid uid, EventHorizonComponent comp, ref PreventCollideEvent args)
+    protected override bool PreventCollide(EntityUid uid, EventHorizonComponent comp, ref PreventCollideEvent args)
     {
         if (base.PreventCollide(uid, comp, ref args) || args.Cancelled)
             return true;
 
-        args.Cancelled = !CanConsumeEntity(args.BodyB.Owner, (EventHorizonComponent)comp);
+        args.Cancelled = !CanConsumeEntity(args.OtherEntity, comp);
         return false;
     }
 
@@ -419,7 +436,7 @@ public sealed class EventHorizonSystem : SharedEventHorizonSystem
         if (args.OurFixture.ID != comp.HorizonFixtureId)
             return;
 
-        AttemptConsumeEntity(args.OtherFixture.Body.Owner, comp);
+        AttemptConsumeEntity(args.OtherEntity, comp);
     }
 
     /// <summary>
@@ -450,10 +467,10 @@ public sealed class EventHorizonSystem : SharedEventHorizonSystem
 
     /// <summary>
     /// Handles event horizons deciding to escape containers they are inserted into.
-    /// Delegates the actual escape to <see cref="EventHorizonSystem.OnEventHorizonContained(EventHorizonContainedEvent)"> on a delay.
+    /// Delegates the actual escape to <see cref="EventHorizonSystem.OnEventHorizonContained(EventHorizonContainedEvent)" /> on a delay.
     /// This ensures that the escape is handled after all other handlers for the insertion event and satisfies the assertion that
     ///     the inserted entity SHALL be inside of the specified container after all handles to the entity event
-    ///     <see cref="EntGotInsertedIntoContainerMessage"> are processed.
+    ///     <see cref="EntGotInsertedIntoContainerMessage" /> are processed.
     /// </summary>
     /// <param name="uid">The uid of the event horizon.</param>]
     /// <param name="comp">The state of the event horizon.</param>]

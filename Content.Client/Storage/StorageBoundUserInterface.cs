@@ -1,7 +1,7 @@
 using Content.Client.Examine;
 using Content.Client.Storage.UI;
 using Content.Client.UserInterface.Controls;
-using Content.Client.Verbs;
+using Content.Client.Verbs.UI;
 using Content.Shared.Input;
 using Content.Shared.Interaction;
 using JetBrains.Annotations;
@@ -16,9 +16,10 @@ namespace Content.Client.Storage
     [UsedImplicitly]
     public sealed class StorageBoundUserInterface : BoundUserInterface
     {
-        [ViewVariables] private StorageWindow? _window;
+        [ViewVariables]
+        private StorageWindow? _window;
 
-        public StorageBoundUserInterface(ClientUserInterfaceComponent owner, Enum uiKey) : base(owner, uiKey)
+        public StorageBoundUserInterface(EntityUid owner, Enum uiKey) : base(owner, uiKey)
         {
         }
 
@@ -28,9 +29,10 @@ namespace Content.Client.Storage
 
             if (_window == null)
             {
-                var entMan = IoCManager.Resolve<IEntityManager>();
-                _window = new StorageWindow(entMan)
-                    {Title = entMan.GetComponent<MetaDataComponent>(Owner.Owner).EntityName};
+                _window = new StorageWindow(EntMan)
+                {
+                    Title = EntMan.GetComponent<MetaDataComponent>(Owner).EntityName
+                };
 
                 _window.EntityList.GenerateItem += _window.GenerateButton;
                 _window.EntityList.ItemPressed += InteractWithItem;
@@ -47,14 +49,14 @@ namespace Content.Client.Storage
 
         public void InteractWithItem(BaseButton.ButtonEventArgs args, ListData cData)
         {
-            if (cData is not EntityListData {Uid: var entity})
+            if (cData is not EntityListData { Uid: var entity })
                 return;
 
             if (args.Event.Function == EngineKeyFunctions.UIClick)
             {
                 SendMessage(new StorageInteractWithItemEvent(entity));
             }
-            else if (IoCManager.Resolve<IEntityManager>().EntityExists(entity))
+            else if (EntMan.EntityExists(entity))
             {
                 OnButtonPressed(args.Event, entity);
             }
@@ -62,26 +64,23 @@ namespace Content.Client.Storage
 
         private void OnButtonPressed(GUIBoundKeyEventArgs args, EntityUid entity)
         {
-            var entitySys = IoCManager.Resolve<IEntitySystemManager>();
-            var entities = IoCManager.Resolve<IEntityManager>();
-
             if (args.Function == ContentKeyFunctions.ExamineEntity)
             {
-                entitySys.GetEntitySystem<ExamineSystem>()
+                EntMan.System<ExamineSystem>()
                     .DoExamine(entity);
             }
             else if (args.Function == EngineKeyFunctions.UseSecondary)
             {
-                entitySys.GetEntitySystem<VerbSystem>().VerbMenu.OpenVerbMenu(entity);
+                IoCManager.Resolve<IUserInterfaceManager>().GetUIController<VerbMenuUIController>().OpenVerbMenu(entity);
             }
             else if (args.Function == ContentKeyFunctions.ActivateItemInWorld)
             {
-                entities.EntityNetManager?.SendSystemNetworkMessage(
+                EntMan.EntityNetManager?.SendSystemNetworkMessage(
                     new InteractInventorySlotEvent(entity, altInteract: false));
             }
             else if (args.Function == ContentKeyFunctions.AltActivateItemInWorld)
             {
-                entities.RaisePredictiveEvent(new InteractInventorySlotEvent(entity, altInteract: true));
+                EntMan.RaisePredictiveEvent(new InteractInventorySlotEvent(entity, altInteract: true));
             }
             else
             {

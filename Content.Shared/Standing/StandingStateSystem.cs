@@ -1,21 +1,16 @@
-using Content.Shared.Audio;
 using Content.Shared.Hands.Components;
+using Content.Shared.Physics;
 using Content.Shared.Rotation;
 using Robust.Shared.Audio;
-using Robust.Shared.Player;
-using Robust.Shared.Timing;
-using Robust.Shared.Physics;
-using Content.Shared.Physics;
 using Robust.Shared.GameStates;
-using Robust.Shared.Serialization;
-using Robust.Shared.Network;
+using Robust.Shared.Physics;
 using Robust.Shared.Physics.Systems;
+using Robust.Shared.Serialization;
 
 namespace Content.Shared.Standing
 {
     public sealed class StandingStateSystem : EntitySystem
     {
-        [Dependency] private readonly IGameTiming _gameTiming = default!;
         [Dependency] private readonly SharedAppearanceSystem _appearance = default!;
         [Dependency] private readonly SharedAudioSystem _audio = default!;
         [Dependency] private readonly SharedPhysicsSystem _physics = default!;
@@ -54,7 +49,7 @@ namespace Content.Shared.Standing
         public bool Down(EntityUid uid, bool playSound = true, bool dropHeldItems = true,
             StandingStateComponent? standingState = null,
             AppearanceComponent? appearance = null,
-            SharedHandsComponent? hands = null)
+            HandsComponent? hands = null)
         {
             // TODO: This should actually log missing comps...
             if (!Resolve(uid, ref standingState, false))
@@ -97,7 +92,7 @@ namespace Content.Shared.Standing
                         continue;
 
                     standingState.ChangedFixtures.Add(key);
-                    _physics.SetCollisionMask(fixture, fixture.CollisionMask & ~StandingCollisionLayer);
+                    _physics.SetCollisionMask(uid, fixture, fixture.CollisionMask & ~StandingCollisionLayer, manager: fixtureComponent);
                 }
             }
 
@@ -149,7 +144,7 @@ namespace Content.Shared.Standing
                 foreach (var key in standingState.ChangedFixtures)
                 {
                     if (fixtureComponent.Fixtures.TryGetValue(key, out var fixture))
-                        _physics.SetCollisionMask(fixture, fixture.CollisionMask | StandingCollisionLayer);
+                        _physics.SetCollisionMask(uid, fixture, fixture.CollisionMask | StandingCollisionLayer, fixtureComponent);
                 }
             }
             standingState.ChangedFixtures.Clear();

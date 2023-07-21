@@ -1,7 +1,7 @@
 using System.Linq;
 using Content.Server.Mind.Components;
 using Content.Server.Objectives.Interfaces;
-using Content.Shared.MobState.Components;
+using Content.Shared.Mobs.Components;
 using JetBrains.Annotations;
 using Robust.Shared.Random;
 
@@ -13,7 +13,7 @@ namespace Content.Server.Objectives.Conditions
     {
         public override IObjectiveCondition GetAssigned(Mind.Mind mind)
         {
-            var allHumans = EntityManager.EntityQuery<MindComponent>(true).Where(mc =>
+            var allHumans = EntityManager.EntityQuery<MindContainerComponent>(true).Where(mc =>
             {
                 var entity = mc.Mind?.OwnedEntity;
 

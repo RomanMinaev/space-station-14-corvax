@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using Content.Server.Research.Components;
+using Content.Shared.Access.Systems;
+using Content.Shared.Popups;
+using Content.Shared.Research.Components;
 using Content.Shared.Research.Systems;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
-using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
 namespace Content.Server.Research.Systems
@@ -12,37 +14,47 @@ namespace Content.Server.Research.Systems
     public sealed partial class ResearchSystem : SharedResearchSystem
     {
         [Dependency] private readonly IGameTiming _timing = default!;
-        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
+        [Dependency] private readonly AccessReaderSystem _accessReader = default!;
         [Dependency] private readonly UserInterfaceSystem _uiSystem = default!;
+        [Dependency] private readonly SharedPopupSystem _popup = default!;
 
         public override void Initialize()
         {
             base.Initialize();
-            SubscribeLocalEvent<ResearchServerComponent, ComponentStartup>(OnStartup);
-
             InitializeClient();
             InitializeConsole();
             InitializeSource();
+            InitializeServer();
+
+            SubscribeLocalEvent<TechnologyDatabaseComponent, ResearchRegistrationChangedEvent>(OnDatabaseRegistrationChanged);
         }
 
-        private void OnStartup(EntityUid uid, ResearchServerComponent component, ComponentStartup args)
+        /// <summary>
+        /// Gets a server based on it's unique numeric id.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="serverUid"></param>
+        /// <param name="serverComponent"></param>
+        /// <returns></returns>
+        public bool TryGetServerById(int id, [NotNullWhen(true)] out EntityUid? serverUid, [NotNullWhen(true)] out ResearchServerComponent? serverComponent)
         {
-            var unusedId = EntityQuery<ResearchServerComponent>(true)
-                .Max(s => s.Id) + 1;
-            component.Id = unusedId;
-        }
-
-        public ResearchServerComponent? GetServerById(int id)
-        {
+            serverUid = null;
+            serverComponent = null;
             foreach (var server in EntityQuery<ResearchServerComponent>())
             {
-                if (server.Id == id)
-                    return server;
+                if (server.Id != id)
+                    continue;
+                serverUid = server.Owner;
+                serverComponent = server;
+                return true;
             }
-
-            return null;
+            return false;
         }
 
+        /// <summary>
+        /// Gets the names of all the servers.
+        /// </summary>
+        /// <returns></returns>
         public string[] GetServerNames()
         {
             var allServers = EntityQuery<ResearchServerComponent>(true).ToArray();
@@ -56,6 +68,10 @@ namespace Content.Server.Research.Systems
             return list;
         }
 
+        /// <summary>
+        /// Gets the ids of all the servers
+        /// </summary>
+        /// <returns></returns>
         public int[] GetServerIds()
         {
             var allServers = EntityQuery<ResearchServerComponent>(true).ToArray();
@@ -77,7 +93,7 @@ namespace Content.Server.Research.Systems
                     continue;
                 server.NextUpdateTime = _timing.CurTime + server.ResearchConsoleUpdateTime;
 
-                UpdateServer(server, (int) server.ResearchConsoleUpdateTime.TotalSeconds);
+                UpdateServer(server.Owner, (int) server.ResearchConsoleUpdateTime.TotalSeconds, server);
             }
         }
     }

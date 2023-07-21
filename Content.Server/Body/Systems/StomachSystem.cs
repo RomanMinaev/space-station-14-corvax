@@ -1,4 +1,4 @@
-﻿using Content.Server.Body.Components;
+using Content.Server.Body.Components;
 using Content.Server.Chemistry.Components.SolutionManager;
 using Content.Server.Chemistry.EntitySystems;
 using Content.Shared.Body.Organ;
@@ -16,7 +16,6 @@ namespace Content.Server.Body.Systems
 
         public override void Initialize()
         {
-            SubscribeLocalEvent<StomachComponent, ComponentInit>(OnComponentInit);
             SubscribeLocalEvent<StomachComponent, ApplyMetabolicMultiplierEvent>(OnApplyMetabolicMultiplier);
         }
 
@@ -47,7 +46,7 @@ namespace Content.Server.Body.Systems
                     delta.Increment(stomach.UpdateInterval);
                     if (delta.Lifetime > stomach.DigestionDelay)
                     {
-                        if (stomachSolution.ContainsReagent(delta.ReagentId, out var quant))
+                        if (stomachSolution.TryGetReagent(delta.ReagentId, out var quant))
                         {
                             if (quant > delta.Quantity)
                                 quant = delta.Quantity;
@@ -85,12 +84,6 @@ namespace Content.Server.Body.Systems
             // Reset the accumulator properly
             if (component.AccumulatedFrameTime >= component.UpdateInterval)
                 component.AccumulatedFrameTime = component.UpdateInterval;
-        }
-
-        private void OnComponentInit(EntityUid uid, StomachComponent component, ComponentInit args)
-        {
-            var solution = _solutionContainerSystem.EnsureSolution(uid, DefaultSolutionName);
-            solution.MaxVolume = component.InitialMaxVolume;
         }
 
         public bool CanTransferSolution(EntityUid uid, Solution solution,

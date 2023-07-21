@@ -1,8 +1,5 @@
 - type: latheRecipe
   id: TimerTrigger
-  icon:
-    sprite: Objects/Devices/timer.rsi
-    state: timer
   result: TimerTrigger
   completetime: 2
   materials:
@@ -11,9 +8,6 @@
 
 - type: latheRecipe
   id: SignalTrigger
-  icon:
-    sprite: Objects/Devices/signaltrigger.rsi
-    state: signaltrigger
   result: SignalTrigger
   completetime: 2
   materials:
@@ -22,9 +16,6 @@
 
 - type: latheRecipe
   id: VoiceTrigger
-  icon:
-    sprite: Objects/Devices/voice.rsi
-    state: voice
   result: VoiceTrigger
   completetime: 2
   materials:
@@ -33,9 +24,6 @@
 
 - type: latheRecipe
   id: ChemicalPayload
-  icon:
-    sprite: Objects/Devices/payload.rsi
-    state: payload-empty
   result: ChemicalPayload
   completetime: 2
   materials:
@@ -44,11 +32,8 @@
 
 - type: latheRecipe
   id: FlashPayload
-  icon:
-    sprite: Objects/Devices/payload.rsi
-    state: payload-flash-armed
   result: FlashPayload
-  completetime: 1
+  completetime: 2
   materials:
     Steel: 50
     Plastic: 100
@@ -56,13 +41,129 @@
     #one fourth of what making a flash would cost
 
 - type: latheRecipe
+  id: ExplosivePayload
+  result: ExplosivePayload
+  completetime: 4
+  materials:
+    Steel: 100
+    Plastic: 100
+    Glass: 50
+    Plasma: 50
+    Silver: 50
+
+- type: latheRecipe
   id: Signaller
-  icon:
-    sprite: Objects/Devices/signaller.rsi
-    state: signaller
   result: RemoteSignaller
   completetime: 2
   materials:
     Steel: 100
     Plastic: 200
     Glass: 100
+
+- type: latheRecipe
+  id: AnomalyLocator
+  result: AnomalyLocatorEmpty
+  completetime: 3
+  materials:
+    Steel: 400
+    Glass: 100
+
+- type: latheRecipe
+  id: AnomalyScanner
+  result: AnomalyScanner
+  completetime: 2
+  materials:
+    Plastic: 200
+    Glass: 150
+
+- type: latheRecipe
+  id: WeaponPistolCHIMP
+  result: WeaponPistolCHIMP
+  completetime: 5
+  materials:
+    Steel: 500
+    Glass: 400
+
+- type: latheRecipe
+  id: ClothingBackpackHolding
+  result: ClothingBackpackHolding
+  completetime: 5
+  materials:
+    Steel: 2000
+    Silver: 750
+    Plasma: 1500
+    Uranium: 150
+
+- type: latheRecipe
+  id: ClothingBackpackSatchelHolding
+  result: ClothingBackpackSatchelHolding
+  completetime: 5
+  materials:
+    Steel: 2000
+    Silver: 750
+    Plasma: 1500
+    Uranium: 150
+
+- type: latheRecipe
+  id: ClothingBackpackDuffelHolding
+  result: ClothingBackpackDuffelHolding
+  completetime: 5
+  materials:
+    Steel: 2000
+    Silver: 750
+    Plasma: 1500
+    Uranium: 150
+
+- type: latheRecipe
+  id: WeaponCrusher
+  result: WeaponCrusher
+  completetime: 5
+  materials:
+    Steel: 1000
+    Glass: 250
+    Plastic: 100
+
+- type: latheRecipe
+  id: WeaponCrusherDagger
+  result: WeaponCrusherDagger
+  completetime: 5
+  materials:
+    Steel: 500
+    Glass: 250
+    Plastic: 50
+
+- type: latheRecipe
+  id: WeaponForceGun
+  result: WeaponForceGun
+  completetime: 5
+  materials:
+    Steel: 500
+    Glass: 400
+    Silver: 200
+
+- type: latheRecipe
+  id: WeaponProtoKineticAccelerator
+  result: WeaponProtoKineticAccelerator
+  completetime: 5
+  materials:
+    Steel: 1000
+    Glass: 500
+    Silver: 100
+
+- type: latheRecipe
+  id: WeaponTetherGun
+  result: WeaponTetherGun
+  completetime: 5
+  materials:
+    Steel: 500
+    Glass: 400
+    Silver: 100
+
+- type: latheRecipe
+  id: WeaponGrapplingGun
+  result: WeaponGrapplingGun
+  completetime: 5
+  materials:
+    Steel: 500
+    Glass: 400
+    Gold: 100

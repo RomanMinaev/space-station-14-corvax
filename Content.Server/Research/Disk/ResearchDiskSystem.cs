@@ -1,10 +1,9 @@
 using System.Linq;
 using Content.Shared.Interaction;
-using Content.Server.Research.Components;
 using Content.Server.Popups;
 using Content.Shared.Research.Prototypes;
 using Content.Server.Research.Systems;
-using Robust.Shared.Player;
+using Content.Shared.Research.Components;
 using Robust.Shared.Prototypes;
 
 namespace Content.Server.Research.Disk
@@ -29,7 +28,7 @@ namespace Content.Server.Research.Disk
             if (!TryComp<ResearchServerComponent>(args.Target, out var server))
                 return;
 
-            _research.ChangePointsOnServer(server.Owner, component.Points, server);
+            _research.ModifyServerPoints(args.Target.Value, component.Points, server);
             _popupSystem.PopupEntity(Loc.GetString("research-disk-inserted", ("points", component.Points)), args.Target.Value, args.User);
             EntityManager.QueueDeleteEntity(uid);
         }
@@ -40,7 +39,7 @@ namespace Content.Server.Research.Disk
                 return;
 
             component.Points = _prototype.EnumeratePrototypes<TechnologyPrototype>()
-                .Sum(tech => tech.RequiredPoints);
+                .Sum(tech => tech.Cost);
         }
     }
 }

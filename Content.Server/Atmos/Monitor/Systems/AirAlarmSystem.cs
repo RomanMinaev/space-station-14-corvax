@@ -7,7 +7,6 @@ using Content.Server.DeviceNetwork.Systems;
 using Content.Server.Popups;
 using Content.Server.Power.Components;
 using Content.Server.Power.EntitySystems;
-using Content.Server.Wires;
 using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
 using Content.Shared.Atmos;
@@ -15,9 +14,10 @@ using Content.Shared.Atmos.Monitor;
 using Content.Shared.Atmos.Monitor.Components;
 using Content.Shared.Atmos.Piping.Unary.Components;
 using Content.Shared.DeviceNetwork;
+using Content.Shared.DeviceNetwork.Systems;
 using Content.Shared.Interaction;
+using Content.Shared.Wires;
 using Robust.Server.GameObjects;
-using Robust.Shared.Player;
 
 namespace Content.Server.Atmos.Monitor.Systems;
 
@@ -157,6 +157,7 @@ public sealed class AirAlarmSystem : EntitySystem
         SubscribeLocalEvent<AirAlarmComponent, PowerChangedEvent>(OnPowerChanged);
         SubscribeLocalEvent<AirAlarmComponent, AirAlarmResyncAllDevicesMessage>(OnResyncAll);
         SubscribeLocalEvent<AirAlarmComponent, AirAlarmUpdateAlarmModeMessage>(OnUpdateAlarmMode);
+        SubscribeLocalEvent<AirAlarmComponent, AirAlarmUpdateAutoModeMessage>(OnUpdateAutoMode);
         SubscribeLocalEvent<AirAlarmComponent, AirAlarmUpdateAlarmThresholdMessage>(OnUpdateThreshold);
         SubscribeLocalEvent<AirAlarmComponent, AirAlarmUpdateDeviceDataMessage>(OnUpdateDeviceData);
         SubscribeLocalEvent<AirAlarmComponent, AirAlarmTabSetMessage>(OnTabChange);
@@ -227,10 +228,10 @@ public sealed class AirAlarmSystem : EntitySystem
         if (!_interactionSystem.InRangeUnobstructed(args.User, args.Target))
             return;
 
-        if (!EntityManager.TryGetComponent(args.User, out ActorComponent? actor))
+        if (!TryComp<ActorComponent>(args.User, out var actor))
             return;
 
-        if (EntityManager.TryGetComponent(uid, out WiresComponent? wire) && wire.IsPanelOpen)
+        if (TryComp<WiresPanelComponent>(uid, out var panel) && panel.Open)
         {
             args.Handled = false;
             return;
@@ -239,7 +240,9 @@ public sealed class AirAlarmSystem : EntitySystem
         if (!this.IsPowered(uid, EntityManager))
             return;
 
-        _uiSystem.GetUiOrNull(component.Owner, SharedAirAlarmInterfaceKey.Key)?.Open(actor.PlayerSession);
+        var ui = _uiSystem.GetUiOrNull(uid, SharedAirAlarmInterfaceKey.Key);
+        if (ui != null)
+            _uiSystem.OpenUi(ui, actor.PlayerSession);
         component.ActivePlayers.Add(actor.PlayerSession.UserId);
         AddActiveInterface(uid);
         SyncAllDevices(uid);
@@ -269,6 +272,12 @@ public sealed class AirAlarmSystem : EntitySystem
             SetMode(uid, addr, args.Mode, false);
         else
             UpdateUI(uid, component);
+    }
+
+    private void OnUpdateAutoMode(EntityUid uid, AirAlarmComponent component, AirAlarmUpdateAutoModeMessage args)
+    {
+        component.AutoMode = args.Enabled;
+        UpdateUI(uid, component);
     }
 
     private void OnUpdateThreshold(EntityUid uid, AirAlarmComponent component, AirAlarmUpdateAlarmThresholdMessage args)
@@ -315,13 +324,16 @@ public sealed class AirAlarmSystem : EntitySystem
         if (EntityManager.TryGetComponent(uid, out DeviceNetworkComponent? netConn))
             addr = netConn.Address;
 
-        if (args.AlarmType == AtmosAlarmType.Danger)
+        if (component.AutoMode)
         {
-            SetMode(uid, addr, AirAlarmMode.WideFiltering, false);
-        }
-        else if (args.AlarmType == AtmosAlarmType.Normal || args.AlarmType == AtmosAlarmType.Warning)
-        {
-            SetMode(uid, addr, AirAlarmMode.Filtering, false);
+            if (args.AlarmType == AtmosAlarmType.Danger)
+            {
+                SetMode(uid, addr, AirAlarmMode.WideFiltering, false);
+            }
+            else if (args.AlarmType == AtmosAlarmType.Normal || args.AlarmType == AtmosAlarmType.Warning)
+            {
+                SetMode(uid, addr, AirAlarmMode.Filtering, false);
+            }
         }
 
         UpdateUI(uid, component);
@@ -543,7 +555,7 @@ public sealed class AirAlarmSystem : EntitySystem
         _uiSystem.TrySetUiState(
             uid,
             SharedAirAlarmInterfaceKey.Key,
-            new AirAlarmUIState(devNet.Address, deviceCount, pressure, temperature, dataToSend, alarm.CurrentMode, alarm.CurrentTab, highestAlarm.Value));
+            new AirAlarmUIState(devNet.Address, deviceCount, pressure, temperature, dataToSend, alarm.CurrentMode, alarm.CurrentTab, highestAlarm.Value, alarm.AutoMode));
     }
 
     private const float Delay = 8f;

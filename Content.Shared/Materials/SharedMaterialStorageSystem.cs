@@ -3,6 +3,8 @@ using Content.Shared.Interaction;
 using Content.Shared.Stacks;
 using JetBrains.Annotations;
 using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 
 namespace Content.Shared.Materials;
 
@@ -12,14 +14,41 @@ namespace Content.Shared.Materials;
 /// </summary>
 public abstract class SharedMaterialStorageSystem : EntitySystem
 {
+    [Dependency] private readonly SharedAppearanceSystem _appearance = default!;
+    [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly IPrototypeManager _prototype = default!;
+
     /// <inheritdoc/>
     public override void Initialize()
     {
         base.Initialize();
 
+        SubscribeLocalEvent<MaterialStorageComponent, MapInitEvent>(OnMapInit);
         SubscribeLocalEvent<MaterialStorageComponent, InteractUsingEvent>(OnInteractUsing);
         SubscribeLocalEvent<MaterialStorageComponent, ComponentGetState>(OnGetState);
         SubscribeLocalEvent<MaterialStorageComponent, ComponentHandleState>(OnHandleState);
+        SubscribeLocalEvent<InsertingMaterialStorageComponent, ComponentGetState>(OnGetInsertingState);
+        SubscribeLocalEvent<InsertingMaterialStorageComponent, ComponentHandleState>(OnHandleInsertingState);
+        SubscribeLocalEvent<InsertingMaterialStorageComponent, EntityUnpausedEvent>(OnUnpaused);
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        var query = EntityQueryEnumerator<InsertingMaterialStorageComponent>();
+        while (query.MoveNext(out var uid, out var inserting))
+        {
+            if (_timing.CurTime < inserting.EndTime)
+                continue;
+
+            _appearance.SetData(uid, MaterialStorageVisuals.Inserting, false);
+            RemComp(uid, inserting);
+        }
+    }
+
+    private void OnMapInit(EntityUid uid, MaterialStorageComponent component, MapInitEvent args)
+    {
+        _appearance.SetData(uid, MaterialStorageVisuals.Inserting, false);
     }
 
     private void OnGetState(EntityUid uid, MaterialStorageComponent component, ref ComponentGetState args)
@@ -36,6 +65,25 @@ public abstract class SharedMaterialStorageSystem : EntitySystem
 
         if (state.MaterialWhitelist != null)
             component.MaterialWhiteList = new List<string>(state.MaterialWhitelist);
+    }
+
+    private void OnGetInsertingState(EntityUid uid, InsertingMaterialStorageComponent component, ref ComponentGetState args)
+    {
+        args.State = new InsertingMaterialStorageComponentState(component.EndTime, component.MaterialColor);
+    }
+
+    private void OnHandleInsertingState(EntityUid uid, InsertingMaterialStorageComponent component, ref ComponentHandleState args)
+    {
+        if (args.Current is not InsertingMaterialStorageComponentState state)
+            return;
+
+        component.EndTime = state.EndTime;
+        component.MaterialColor = state.MaterialColor;
+    }
+
+    private void OnUnpaused(EntityUid uid, InsertingMaterialStorageComponent component, ref EntityUnpausedEvent args)
+    {
+        component.EndTime += args.PausedTime;
     }
 
     /// <summary>
@@ -128,7 +176,8 @@ public abstract class SharedMaterialStorageSystem : EntitySystem
             component.Storage.Add(materialId, 0);
         component.Storage[materialId] += volume;
 
-        RaiseLocalEvent(uid, new MaterialAmountChangedEvent());
+        var ev = new MaterialAmountChangedEvent();
+        RaiseLocalEvent(uid, ref ev);
         Dirty(component);
         return true;
     }
@@ -136,53 +185,53 @@ public abstract class SharedMaterialStorageSystem : EntitySystem
     /// <summary>
     /// Tries to insert an entity into the material storage.
     /// </summary>
-    /// <param name="user"></param>
-    /// <param name="toInsert"></param>
-    /// <param name="receiver"></param>
-    /// <param name="component"></param>
-    /// <returns>If it was successful</returns>
-    public virtual bool TryInsertMaterialEntity(EntityUid user, EntityUid toInsert, EntityUid receiver, MaterialStorageComponent? component = null)
+    public virtual bool TryInsertMaterialEntity(EntityUid user,
+        EntityUid toInsert,
+        EntityUid receiver,
+        MaterialStorageComponent? storage = null,
+        MaterialComponent? material = null,
+        PhysicalCompositionComponent? composition = null)
     {
-        if (!Resolve(receiver, ref component))
+        if (!Resolve(receiver, ref storage))
             return false;
 
-        if (!TryComp<MaterialComponent>(toInsert, out var material))
+        if (!Resolve(toInsert, ref material, ref composition, false))
             return false;
 
-        if (component.EntityWhitelist?.IsValid(toInsert) == false)
+        if (storage.EntityWhitelist?.IsValid(toInsert) == false)
             return false;
 
-        if (component.MaterialWhiteList != null)
-        {
-            var matUsed = false;
-            foreach (var mat in material.Materials)
-            {
-                if (component.MaterialWhiteList.Contains(mat.ID))
-                    matUsed = true;
-            }
-
-            if (!matUsed)
-                return false;
-        }
+        // Material Whitelist checked implicitly by CanChangeMaterialAmount();
 
         var multiplier = TryComp<StackComponent>(toInsert, out var stackComponent) ? stackComponent.Count : 1;
         var totalVolume = 0;
-        foreach (var (mat, vol) in component.Storage)
+        foreach (var (mat, vol) in composition.MaterialComposition)
         {
-            if (!CanChangeMaterialAmount(receiver, mat, vol, component))
+            if (!CanChangeMaterialAmount(receiver, mat, vol * multiplier, storage))
                 return false;
             totalVolume += vol * multiplier;
         }
 
-        if (!CanTakeVolume(receiver, totalVolume, component))
+        if (!CanTakeVolume(receiver, totalVolume, storage))
             return false;
 
-        foreach (var (mat, vol) in material._materials)
+        foreach (var (mat, vol) in composition.MaterialComposition)
         {
-            TryChangeMaterialAmount(receiver, mat, vol * multiplier, component);
+            TryChangeMaterialAmount(receiver, mat, vol * multiplier, storage);
         }
 
-        RaiseLocalEvent(component.Owner, new MaterialEntityInsertedEvent(material._materials));
+        var insertingComp = EnsureComp<InsertingMaterialStorageComponent>(receiver);
+        insertingComp.EndTime = _timing.CurTime + storage.InsertionTime;
+        if (!storage.IgnoreColor)
+        {
+            _prototype.TryIndex<MaterialPrototype>(composition.MaterialComposition.Keys.First(), out var lastMat);
+            insertingComp.MaterialColor = lastMat?.Color;
+        }
+        _appearance.SetData(receiver, MaterialStorageVisuals.Inserting, true);
+        Dirty(insertingComp);
+
+        var ev = new MaterialEntityInsertedEvent(material);
+        RaiseLocalEvent(receiver, ref ev);
         return true;
     }
 
@@ -197,14 +246,14 @@ public abstract class SharedMaterialStorageSystem : EntitySystem
         if (!Resolve(uid, ref component, false))
             return;
         var ev = new GetMaterialWhitelistEvent(uid);
-        RaiseLocalEvent(uid, ev);
+        RaiseLocalEvent(uid, ref ev);
         component.MaterialWhiteList = ev.Whitelist;
         Dirty(component);
     }
 
     private void OnInteractUsing(EntityUid uid, MaterialStorageComponent component, InteractUsingEvent args)
     {
-        if (args.Handled)
+        if (args.Handled || !component.InsertOnInteract)
             return;
         args.Handled = TryInsertMaterialEntity(args.User, args.Used, uid, component);
     }

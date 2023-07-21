@@ -13,6 +13,8 @@ class FluentAstAbstract:
             return FluentAstJunk(element).get_id_name()
         elif isinstance(element, ast.Message):
             return FluentAstMessage(element).get_id_name()
+        elif isinstance(element, ast.Term):
+            return FluentAstTerm(element).get_id_name()
         else:
             return None
 
@@ -23,6 +25,9 @@ class FluentAstAbstract:
             return cls.element
         elif isinstance(element, ast.Message):
             cls.element = FluentAstMessage(element)
+            return cls.element
+        elif isinstance(element, ast.Term):
+            cls.element = FluentAstTerm(element)
             return cls.element
         else:
             return None
@@ -35,6 +40,15 @@ class FluentAstMessage:
 
     def get_id_name(self):
         return self.message.id.name
+
+
+class FluentAstTerm:
+    def __init__(self, term: ast.Term):
+        self.term = term
+        self.element = term
+
+    def get_id_name(self):
+        return self.term.id.name
 
 
 class FluentAstAttribute:
@@ -83,9 +97,6 @@ class FluentSerializedMessage:
                 attributes.append(FluentAstAttribute('desc', '{ ' + FluentSerializedMessage.get_key(parent_id) + '.desc' + ' }'));
             else:
                 attributes.append(FluentAstAttribute('desc', '{ "" }'))
-
-        if len(list(filter(lambda attr: attr.id == 'suffix', attributes))) == 0:
-            attributes.append(FluentAstAttribute('suffix', '{ "" }'))
 
         message = f'{cls.get_key(id, raw_key)} = {cls.get_value(value, parent_id)}\n'
 

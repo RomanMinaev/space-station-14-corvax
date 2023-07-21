@@ -1,6 +1,5 @@
 ent-OreBase = { ent-BaseItem }
     .desc = A piece of unrefined ore.
-    .suffix = { "" }
 ent-GoldOre = gold ore
     .suffix = Full
     .desc = { ent-OreBase.desc }
@@ -37,3 +36,9 @@ ent-UraniumOre = uranium ore
 ent-UraniumOre1 = { ent-UraniumOre }
     .suffix = Single
     .desc = { ent-UraniumOre.desc }
+ent-BananiumOre = bananium ore
+    .suffix = Full
+    .desc = { ent-OreBase.desc }
+ent-BananiumOre1 = { ent-BananiumOre }
+    .suffix = Single
+    .desc = { ent-BananiumOre.desc }

@@ -44,7 +44,7 @@ namespace Content.Server.Mind.Commands
 
         public static void MakeSentient(EntityUid uid, IEntityManager entityManager, bool allowMovement = true, bool allowSpeech = true)
         {
-            entityManager.EnsureComponent<MindComponent>(uid);
+            entityManager.EnsureComponent<MindContainerComponent>(uid);
             if (allowMovement)
             {
                 entityManager.EnsureComponent<InputMoverComponent>(uid);
@@ -54,8 +54,8 @@ namespace Content.Server.Mind.Commands
 
             if (allowSpeech)
             {
-                entityManager.EnsureComponent<SharedSpeechComponent>(uid);
-                entityManager.EnsureComponent<SharedEmotingComponent>(uid);
+                entityManager.EnsureComponent<SpeechComponent>(uid);
+                entityManager.EnsureComponent<EmotingComponent>(uid);
             }
 
             entityManager.EnsureComponent<ExaminerComponent>(uid);

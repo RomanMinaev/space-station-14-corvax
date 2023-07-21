@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Server.Chemistry.Components;
 using Content.Server.Labels;
-using Content.Server.Labels.Components;
 using Content.Server.Popups;
 using Content.Server.Storage.Components;
 using Content.Server.Storage.EntitySystems;
@@ -16,9 +15,6 @@ using JetBrains.Annotations;
 using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.Containers;
-using Robust.Shared.Player;
-using Robust.Shared.Utility;
-
 
 namespace Content.Server.Chemistry.EntitySystems
 {
@@ -38,6 +34,7 @@ namespace Content.Server.Chemistry.EntitySystems
         [Dependency] private readonly StorageSystem _storageSystem = default!;
         [Dependency] private readonly LabelSystem _labelSystem = default!;
         [Dependency] private readonly ISharedAdminLogManager _adminLogger = default!;
+        [Dependency] private readonly AppearanceSystem _appearance = default!;
 
         private const string PillPrototypeId = "Pill";
 
@@ -66,7 +63,7 @@ namespace Content.Server.Chemistry.EntitySystems
             var outputContainer = _itemSlotsSystem.GetItemOrNull(chemMaster.Owner, SharedChemMaster.OutputSlotName);
 
             var bufferReagents = bufferSolution.Contents;
-            var bufferCurrentVolume = bufferSolution.CurrentVolume;
+            var bufferCurrentVolume = bufferSolution.Volume;
 
             var state = new ChemMasterBoundUserInterfaceState(
                 chemMaster.Mode, BuildInputContainerInfo(inputContainer), BuildOutputContainerInfo(outputContainer),
@@ -210,8 +207,9 @@ namespace Content.Server.Chemistry.EntitySystems
                 _solutionContainerSystem.TryAddSolution(
                     item, itemSolution, withdrawal.SplitSolution(message.Dosage));
 
-                if (TryComp<SpriteComponent>(item, out var spriteComp))
-                    spriteComp.LayerSetState(0, "pill" + (chemMaster.PillType + 1));
+                var pill = EnsureComp<PillComponent>(item);
+                pill.PillType = chemMaster.PillType;
+                Dirty(pill);
 
                 if (user.HasValue)
                 {
@@ -288,7 +286,7 @@ namespace Content.Server.Chemistry.EntitySystems
                 return false;
             }
 
-            if (solution.TotalVolume == 0)
+            if (solution.Volume == 0)
             {
                 if (user.HasValue)
                     _popupSystem.PopupCursor(Loc.GetString("chem-master-window-buffer-empty-text"), user.Value);
@@ -296,7 +294,7 @@ namespace Content.Server.Chemistry.EntitySystems
             }
 
             // ReSharper disable once InvertIf
-            if (neededVolume > solution.CurrentVolume)
+            if (neededVolume > solution.Volume)
             {
                 if (user.HasValue)
                     _popupSystem.PopupCursor(Loc.GetString("chem-master-window-buffer-low-text"), user.Value);
@@ -343,12 +341,12 @@ namespace Content.Server.Chemistry.EntitySystems
             if (!TryComp(container, out ServerStorageComponent? storage))
                 return null;
 
-            var pills = storage.Storage?.ContainedEntities.Select(pill =>
+            var pills = storage.Storage?.ContainedEntities.Select((Func<EntityUid, (string, FixedPoint2 quantity)>) (pill =>
             {
                 _solutionContainerSystem.TryGetSolution(pill, SharedChemMaster.PillSolutionName, out var solution);
-                var quantity = solution?.CurrentVolume ?? FixedPoint2.Zero;
+                var quantity = solution?.Volume ?? FixedPoint2.Zero;
                 return (Name(pill), quantity);
-            }).ToList();
+            })).ToList();
 
             return pills is null
                 ? null
@@ -360,7 +358,7 @@ namespace Content.Server.Chemistry.EntitySystems
             var reagents = solution.Contents
                 .Select(reagent => (reagent.ReagentId, reagent.Quantity)).ToList();
 
-            return new ContainerInfo(name, true, solution.CurrentVolume, solution.MaxVolume, reagents);
+            return new ContainerInfo(name, true, solution.Volume, solution.MaxVolume, reagents);
         }
     }
 }

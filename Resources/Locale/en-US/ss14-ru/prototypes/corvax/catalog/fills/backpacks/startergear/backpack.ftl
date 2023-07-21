@@ -1,3 +1,4 @@
 ent-ClothingBackpackIAAFilled = { ent-ClothingBackpack }
     .desc = { ent-ClothingBackpack.desc }
-    .suffix = { "" }
+ent-ClothingBackpackPsychologistFilled = { ent-ClothingBackpackMedical }
+    .desc = { ent-ClothingBackpackMedical.desc }

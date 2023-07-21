@@ -36,7 +36,7 @@ public sealed class SurveillanceCameraSpeakerSystem : EntitySystem
 
         // this part's mostly copied from speech
         if (time - component.LastSoundPlayed < cd
-            && TryComp<SharedSpeechComponent>(args.Speaker, out var speech)
+            && TryComp<SpeechComponent>(args.Speaker, out var speech)
             && speech.SpeechSounds != null
             && _prototypeManager.TryIndex(speech.SpeechSounds, out SpeechSoundsPrototype? speechProto))
         {
@@ -74,7 +74,7 @@ public sealed class SurveillanceCameraSpeakerSystem : EntitySystem
         var name = Loc.GetString("speech-name-relay", ("speaker", Name(uid)),
             ("originalName", nameEv.Name));
 
-        var hideGlobalGhostChat = true; // log to chat so people can identity the speaker/source, but avoid clogging ghost chat if there are many radios
-        _chatSystem.TrySendInGameICMessage(uid, args.Message, InGameICChatType.Speak, false, hideGlobalGhostChat, nameOverride: name);
+        // log to chat so people can identity the speaker/source, but avoid clogging ghost chat if there are many radios
+        _chatSystem.TrySendInGameICMessage(uid, args.Message, InGameICChatType.Speak, ChatTransmitRange.GhostRangeLimit, nameOverride: name);
     }
 }

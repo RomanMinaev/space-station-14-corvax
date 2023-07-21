@@ -3,6 +3,9 @@
   name: job-name-mime
   description: job-description-mime
   playTimeTracker: JobMime
+  requirements:
+  - !type:OverallPlaytimeRequirement
+      time: 90000 # Corvax-RoleTime
   startingGear: MimeGear
   icon: "Mime"
   supervisors: job-supervisors-hop
@@ -29,5 +32,5 @@
     id: MimePDA
     ears: ClothingHeadsetService
   innerclothingskirt: ClothingUniformJumpskirtMime
-  satchel: ClothingBackpackSatchelFilled
+  satchel: ClothingBackpackSatchelMimeFilled
   duffelbag: ClothingBackpackDuffelMimeFilled

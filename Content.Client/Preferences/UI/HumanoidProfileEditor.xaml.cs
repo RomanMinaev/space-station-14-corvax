@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Numerics;
 using Content.Client.Humanoid;
 using Content.Client.Lobby.UI;
 using Content.Client.Message;
@@ -53,6 +54,7 @@ namespace Content.Client.Preferences.UI
         private readonly IEntityManager _entMan;
         private readonly IConfigurationManager _configurationManager;
         private readonly MarkingManager _markingManager;
+        private readonly JobRequirementsManager _requirements;
 
         private LineEdit _ageEdit => CAgeEdit;
         private LineEdit _nameEdit => CNameEdit;
@@ -63,6 +65,8 @@ namespace Content.Client.Preferences.UI
         private Button _saveButton => CSaveButton;
         private OptionButton _sexButton => CSexButton;
         private OptionButton _genderButton => CPronounsButton;
+        private OptionButton _voiceButton => CVoiceButton; // Corvax-TTS
+        private Button _voicePlayButton => CVoicePlayButton; // Corvax-TTS
         private Slider _skinColor => CSkin;
         private OptionButton _clothingButton => CClothingButton;
         private OptionButton _backpackButton => CBackpackButton;
@@ -171,6 +175,14 @@ namespace Content.Client.Preferences.UI
 
             #endregion Gender
 
+            // Corvax-TTS-Start
+            #region Voice
+
+            InitializeVoice();
+
+            #endregion
+            // Corvax-TTS-End
+
             #region Species
 
             _speciesList = prototypeManager.EnumeratePrototypes<SpeciesPrototype>().Where(o => o.RoundStart).ToList();
@@ -223,6 +235,7 @@ namespace Content.Client.Preferences.UI
                     return;
                 Profile = Profile.WithCharacterAppearance(
                     Profile.Appearance.WithHairColor(newColor.marking.MarkingColors[0]));
+                UpdateCMarkingsHair();
                 IsDirty = true;
             };
 
@@ -241,6 +254,7 @@ namespace Content.Client.Preferences.UI
                     return;
                 Profile = Profile.WithCharacterAppearance(
                     Profile.Appearance.WithFacialHairColor(newColor.marking.MarkingColors[0]));
+                UpdateCMarkingsFacialHair();
                 IsDirty = true;
             };
 
@@ -252,6 +266,7 @@ namespace Content.Client.Preferences.UI
                     Profile.Appearance.WithHairStyleName(HairStyles.DefaultHairStyle)
                 );
                 UpdateHairPickers();
+                UpdateCMarkingsHair();
                 IsDirty = true;
             };
 
@@ -263,6 +278,7 @@ namespace Content.Client.Preferences.UI
                     Profile.Appearance.WithFacialHairStyleName(HairStyles.DefaultFacialHairStyle)
                 );
                 UpdateHairPickers();
+                UpdateCMarkingsFacialHair();
                 IsDirty = true;
             };
 
@@ -282,7 +298,7 @@ namespace Content.Client.Preferences.UI
                 );
 
                 UpdateHairPickers();
-
+                UpdateCMarkingsHair();
                 IsDirty = true;
             };
 
@@ -302,7 +318,7 @@ namespace Content.Client.Preferences.UI
                 );
 
                 UpdateHairPickers();
-
+                UpdateCMarkingsFacialHair();
                 IsDirty = true;
             };
 
@@ -343,6 +359,7 @@ namespace Content.Client.Preferences.UI
                     return;
                 Profile = Profile.WithCharacterAppearance(
                     Profile.Appearance.WithEyeColor(newColor));
+                CMarkings.CurrentEyeColor = Profile.Appearance.EyeColor;
                 IsDirty = true;
             };
 
@@ -372,95 +389,9 @@ namespace Content.Client.Preferences.UI
 
             _jobPriorities = new List<JobPrioritySelector>();
             _jobCategories = new Dictionary<string, BoxContainer>();
-
-            var firstCategory = true;
-            var playTime = IoCManager.Resolve<PlayTimeTrackingManager>();
-
-            foreach (var department in _prototypeManager.EnumeratePrototypes<DepartmentPrototype>())
-            {
-                var departmentName = Loc.GetString($"department-{department.ID}");
-
-                if (!_jobCategories.TryGetValue(department.ID, out var category))
-                {
-                    category = new BoxContainer
-                    {
-                        Orientation = LayoutOrientation.Vertical,
-                        Name = department.ID,
-                        ToolTip = Loc.GetString("humanoid-profile-editor-jobs-amount-in-department-tooltip",
-                            ("departmentName", departmentName))
-                    };
-
-                    if (firstCategory)
-                    {
-                        firstCategory = false;
-                    }
-                    else
-                    {
-                        category.AddChild(new Control
-                        {
-                            MinSize = new Vector2(0, 23),
-                        });
-                    }
-
-                    category.AddChild(new PanelContainer
-                    {
-                        PanelOverride = new StyleBoxFlat {BackgroundColor = Color.FromHex("#464966")},
-                        Children =
-                        {
-                            new Label
-                            {
-                                Text = Loc.GetString("humanoid-profile-editor-department-jobs-label",
-                                    ("departmentName", departmentName))
-                            }
-                        }
-                    });
-
-                    _jobCategories[department.ID] = category;
-                    _jobList.AddChild(category);
-                }
-
-                var jobs = department.Roles.Select(o => _prototypeManager.Index<JobPrototype>(o)).Where(o => o.SetPreference).ToList();
-                jobs.Sort((x, y) => -string.Compare(x.LocalizedName, y.LocalizedName, StringComparison.CurrentCultureIgnoreCase));
-
-                foreach (var job in jobs)
-                {
-                    var selector = new JobPrioritySelector(job);
-
-                    if (!playTime.IsAllowed(job, out var reason))
-                    {
-                        selector.LockRequirements(reason);
-                    }
-
-                    category.AddChild(selector);
-                    _jobPriorities.Add(selector);
-
-                    selector.PriorityChanged += priority =>
-                    {
-                        Profile = Profile?.WithJobPriority(job.ID, priority);
-                        IsDirty = true;
-
-                        foreach (var jobSelector in _jobPriorities)
-                        {
-                            // Sync other selectors with the same job in case of multiple department jobs
-                            if (jobSelector.Job == selector.Job)
-                            {
-                                jobSelector.Priority = priority;
-                            }
-
-                            // Lower any other high priorities to medium.
-                            if (priority == JobPriority.High)
-                            {
-                                if (jobSelector.Job != selector.Job && jobSelector.Priority == JobPriority.High)
-                                {
-                                    jobSelector.Priority = JobPriority.Medium;
-                                    Profile = Profile?.WithJobPriority(jobSelector.Job.ID, JobPriority.Medium);
-                                }
-                            }
-                        }
-                    };
-
-                }
-            }
+            _requirements = IoCManager.Resolve<JobRequirementsManager>();
+            _requirements.Updated += UpdateRoleRequirements;
+            UpdateRoleRequirements();
 
             #endregion Jobs
 
@@ -553,7 +484,7 @@ namespace Content.Client.Preferences.UI
             #endregion FlavorText
 
             #region Dummy
-            var species = Profile?.Species ?? SharedHumanoidSystem.DefaultSpecies;
+            var species = Profile?.Species ?? SharedHumanoidAppearanceSystem.DefaultSpecies;
             var dollProto = _prototypeManager.Index<SpeciesPrototype>(species).DollPrototype;
 
             if (_previewDummy != null)
@@ -566,7 +497,7 @@ namespace Content.Client.Preferences.UI
             _previewSprite = new SpriteView
             {
                 Sprite = sprite,
-                Scale = (6, 6),
+                Scale = new Vector2(6, 6),
                 OverrideDirection = Direction.South,
                 VerticalAlignment = VAlignment.Center,
                 SizeFlagsStretchRatio = 1
@@ -576,7 +507,7 @@ namespace Content.Client.Preferences.UI
             _previewSpriteSide = new SpriteView
             {
                 Sprite = sprite,
-                Scale = (6, 6),
+                Scale = new Vector2(6, 6),
                 OverrideDirection = Direction.East,
                 VerticalAlignment = VAlignment.Center,
                 SizeFlagsStretchRatio = 1
@@ -595,6 +526,101 @@ namespace Content.Client.Preferences.UI
 
 
             IsDirty = false;
+        }
+
+        private void UpdateRoleRequirements()
+        {
+            _jobList.DisposeAllChildren();
+            _jobPriorities.Clear();
+            _jobCategories.Clear();
+            var firstCategory = true;
+
+            foreach (var department in _prototypeManager.EnumeratePrototypes<DepartmentPrototype>())
+            {
+                var departmentName = Loc.GetString($"department-{department.ID}");
+
+                if (!_jobCategories.TryGetValue(department.ID, out var category))
+                {
+                    category = new BoxContainer
+                    {
+                        Orientation = LayoutOrientation.Vertical,
+                        Name = department.ID,
+                        ToolTip = Loc.GetString("humanoid-profile-editor-jobs-amount-in-department-tooltip",
+                            ("departmentName", departmentName))
+                    };
+
+                    if (firstCategory)
+                    {
+                        firstCategory = false;
+                    }
+                    else
+                    {
+                        category.AddChild(new Control
+                        {
+                            MinSize = new Vector2(0, 23),
+                        });
+                    }
+
+                    category.AddChild(new PanelContainer
+                    {
+                        PanelOverride = new StyleBoxFlat {BackgroundColor = Color.FromHex("#464966")},
+                        Children =
+                        {
+                            new Label
+                            {
+                                Text = Loc.GetString("humanoid-profile-editor-department-jobs-label",
+                                    ("departmentName", departmentName)),
+                                Margin = new Thickness(5f, 0, 0, 0)
+                            }
+                        }
+                    });
+
+                    _jobCategories[department.ID] = category;
+                    _jobList.AddChild(category);
+                }
+
+                var jobs = department.Roles.Select(o => _prototypeManager.Index<JobPrototype>(o)).Where(o => o.SetPreference).ToList();
+                jobs.Sort((x, y) => -string.Compare(x.LocalizedName, y.LocalizedName, StringComparison.CurrentCultureIgnoreCase));
+
+                foreach (var job in jobs)
+                {
+                    var selector = new JobPrioritySelector(job);
+
+                    if (!_requirements.IsAllowed(job, out var reason))
+                    {
+                        selector.LockRequirements(reason);
+                    }
+
+                    category.AddChild(selector);
+                    _jobPriorities.Add(selector);
+
+                    selector.PriorityChanged += priority =>
+                    {
+                        Profile = Profile?.WithJobPriority(job.ID, priority);
+                        IsDirty = true;
+
+                        foreach (var jobSelector in _jobPriorities)
+                        {
+                            // Sync other selectors with the same job in case of multiple department jobs
+                            if (jobSelector.Job == selector.Job)
+                            {
+                                jobSelector.Priority = priority;
+                            }
+
+                            // Lower any other high priorities to medium.
+                            if (priority == JobPriority.High)
+                            {
+                                if (jobSelector.Job != selector.Job && jobSelector.Priority == JobPriority.High)
+                                {
+                                    jobSelector.Priority = JobPriority.Medium;
+                                    Profile = Profile?.WithJobPriority(jobSelector.Job.ID, JobPriority.Medium);
+                                }
+                            }
+                        }
+                    };
+
+                }
+            }
         }
 
         private void OnFlavorTextChange(string content)
@@ -645,7 +671,7 @@ namespace Content.Client.Preferences.UI
                     var color = SkinColor.HumanSkinTone((int) _skinColor.Value);
 
                     CMarkings.CurrentSkinColor = color;
-                    Profile = Profile.WithCharacterAppearance(Profile.Appearance.WithSkinColor(color));
+                    Profile = Profile.WithCharacterAppearance(Profile.Appearance.WithSkinColor(color));//
                     break;
                 }
                 case HumanoidSkinColor.Hues:
@@ -688,12 +714,13 @@ namespace Content.Client.Preferences.UI
             if (_previewDummy != null)
                 _entMan.DeleteEntity(_previewDummy.Value);
 
+            _requirements.Updated -= UpdateRoleRequirements;
             _preferencesManager.OnServerDataLoaded -= LoadServerData;
         }
 
         private void RebuildSpriteView()
         {
-            var species = Profile?.Species ?? SharedHumanoidSystem.DefaultSpecies;
+            var species = Profile?.Species ?? SharedHumanoidAppearanceSystem.DefaultSpecies;
             var dollProto = _prototypeManager.Index<SpeciesPrototype>(species).DollPrototype;
 
             if (_previewDummy != null)
@@ -709,7 +736,7 @@ namespace Content.Client.Preferences.UI
                 _previewSprite = new SpriteView
                 {
                     Sprite = sprite,
-                    Scale = (6, 6),
+                    Scale = new Vector2(6, 6),
                     OverrideDirection = Direction.South,
                     VerticalAlignment = VAlignment.Center,
                     SizeFlagsStretchRatio = 1
@@ -726,7 +753,7 @@ namespace Content.Client.Preferences.UI
                 _previewSpriteSide = new SpriteView
                 {
                     Sprite = sprite,
-                    Scale = (6, 6),
+                    Scale = new Vector2(6, 6),
                     OverrideDirection = Direction.East,
                     VerticalAlignment = VAlignment.Center,
                     SizeFlagsStretchRatio = 1
@@ -745,8 +772,8 @@ namespace Content.Client.Preferences.UI
             Profile = (HumanoidCharacterProfile) _preferencesManager.Preferences!.SelectedCharacter;
             CharacterSlot = _preferencesManager.Preferences.SelectedCharacterIndex;
 
-            _needUpdatePreview = true;
             UpdateControls();
+            _needUpdatePreview = true;
         }
 
         private void SetAge(int newAge)
@@ -772,6 +799,7 @@ namespace Content.Client.Preferences.UI
                     break;
             }
             UpdateGenderControls();
+            UpdateTTSVoicesControls(); // Corvax-TTS
             IsDirty = true;
         }
 
@@ -780,6 +808,14 @@ namespace Content.Client.Preferences.UI
             Profile = Profile?.WithGender(newGender);
             IsDirty = true;
         }
+
+        // Corvax-TTS-Start
+        private void SetVoice(string newVoice)
+        {
+            Profile = Profile?.WithVoice(newVoice);
+            IsDirty = true;
+        }
+        // Corvax-TTS-End
 
         private void SetSpecies(string newSpecies)
         {
@@ -940,7 +976,9 @@ namespace Content.Client.Preferences.UI
                 return;
             }
 
-            CMarkings.SetData(Profile.Appearance.Markings, Profile.Species, Profile.Appearance.SkinColor);
+            CMarkings.SetData(Profile.Appearance.Markings, Profile.Species,
+                Profile.Appearance.SkinColor, Profile.Appearance.EyeColor
+            );
         }
 
         private void UpdateSpecies()
@@ -989,7 +1027,6 @@ namespace Content.Client.Preferences.UI
             {
                 return;
             }
-
             var hairMarking = Profile.Appearance.HairStyleId switch
             {
                 HairStyles.DefaultHairStyle => new List<Marking>(),
@@ -1012,6 +1049,76 @@ namespace Content.Client.Preferences.UI
                 1);
         }
 
+        private void UpdateCMarkingsHair()
+        {
+            if (Profile == null)
+            {
+                return;
+            }
+
+            // hair color
+            Color? hairColor = null;
+            if ( Profile.Appearance.HairStyleId != HairStyles.DefaultHairStyle &&
+                _markingManager.Markings.TryGetValue(Profile.Appearance.HairStyleId, out var hairProto)
+            )
+            {
+                if (_markingManager.CanBeApplied(Profile.Species, hairProto, _prototypeManager))
+                {
+                    if (_markingManager.MustMatchSkin(Profile.Species, HumanoidVisualLayers.Hair, out var _, _prototypeManager))
+                    {
+                        hairColor = Profile.Appearance.SkinColor;
+                    }
+                    else
+                    {
+                        hairColor = Profile.Appearance.HairColor;
+                    }
+                }
+            }
+            if (hairColor != null)
+            {
+                CMarkings.HairMarking = new (Profile.Appearance.HairStyleId, new List<Color>() { hairColor.Value });
+            }
+            else
+            {
+                CMarkings.HairMarking = null;
+            }
+        }
+
+        private void UpdateCMarkingsFacialHair()
+        {
+            if (Profile == null)
+            {
+                return;
+            }
+
+            // facial hair color
+            Color? facialHairColor = null;
+            if ( Profile.Appearance.FacialHairStyleId != HairStyles.DefaultFacialHairStyle &&
+                _markingManager.Markings.TryGetValue(Profile.Appearance.FacialHairStyleId, out var facialHairProto)
+            )
+            {
+                if (_markingManager.CanBeApplied(Profile.Species, facialHairProto, _prototypeManager))
+                {
+                    if (_markingManager.MustMatchSkin(Profile.Species, HumanoidVisualLayers.Hair, out var _, _prototypeManager))
+                    {
+                        facialHairColor = Profile.Appearance.SkinColor;
+                    }
+                    else
+                    {
+                        facialHairColor = Profile.Appearance.FacialHairColor;
+                    }
+                }
+            }
+            if (facialHairColor != null)
+            {
+                CMarkings.FacialHairMarking = new (Profile.Appearance.FacialHairStyleId, new List<Color>() { facialHairColor.Value });
+            }
+            else
+            {
+                CMarkings.FacialHairMarking = null;
+            }
+        }
+
         private void UpdateEyePickers()
         {
             if (Profile == null)
@@ -1019,6 +1126,7 @@ namespace Content.Client.Preferences.UI
                 return;
             }
 
+            CMarkings.CurrentEyeColor = Profile.Appearance.EyeColor;
             _eyesPicker.SetData(Profile.Appearance.EyeColor);
         }
 
@@ -1032,7 +1140,7 @@ namespace Content.Client.Preferences.UI
             if (Profile is null)
                 return;
 
-            EntitySystem.Get<HumanoidSystem>().LoadProfile(_previewDummy!.Value, Profile);
+            EntitySystem.Get<HumanoidAppearanceSystem>().LoadProfile(_previewDummy!.Value, Profile);
             LobbyCharacterPreviewPanel.GiveDummyJobClothes(_previewDummy!.Value, Profile);
         }
 
@@ -1048,7 +1156,6 @@ namespace Content.Client.Preferences.UI
             UpdateClothingControls();
             UpdateBackpackControls();
             UpdateAgeEdit();
-            UpdateHairPickers();
             UpdateEyePickers();
             UpdateSaveButton();
             UpdateJobPriorities();
@@ -1056,6 +1163,10 @@ namespace Content.Client.Preferences.UI
             UpdateTraitPreferences();
             UpdateMarkings();
             RebuildSpriteView();
+            UpdateTTSVoicesControls(); // Corvax-TTS
+            UpdateHairPickers();
+            UpdateCMarkingsHair();
+            UpdateCMarkingsFacialHair();
 
             _preferenceUnavailableButton.SelectId((int) Profile.PreferenceUnavailable);
         }
@@ -1111,7 +1222,8 @@ namespace Content.Client.Preferences.UI
                     ButtonStyle = StyleBase.ButtonOpenBoth,
                     LastButtonStyle = StyleBase.ButtonOpenLeft
                 };
-
+                //Override default radio option button width
+                _optionButton.GenerateItem = GenerateButton;
                 // Text, Value
                 _optionButton.AddItem(Loc.GetString("humanoid-profile-editor-job-priority-high-button"), (int) JobPriority.High);
                 _optionButton.AddItem(Loc.GetString("humanoid-profile-editor-job-priority-medium-button"), (int) JobPriority.Medium);
@@ -1126,13 +1238,13 @@ namespace Content.Client.Preferences.UI
 
                 var icon = new TextureRect
                 {
-                    TextureScale = (2, 2),
+                    TextureScale = new Vector2(2, 2),
                     Stretch = TextureRect.StretchMode.KeepCentered
                 };
 
                 if (job.Icon != null)
                 {
-                    var specifier = new SpriteSpecifier.Rsi(new ResourcePath("/Textures/Interface/Misc/job_icons.rsi"),
+                    var specifier = new SpriteSpecifier.Rsi(new ("/Textures/Interface/Misc/job_icons.rsi"),
                         job.Icon);
                     icon.Texture = specifier.Frame0();
                 }
@@ -1159,8 +1271,9 @@ namespace Content.Client.Preferences.UI
 
                 _jobTitle = new Label()
                 {
+                    Margin = new Thickness(5f,0,5f,0),
                     Text = job.LocalizedName,
-                    MinSize = (175, 0),
+                    MinSize = new Vector2(180, 0),
                     MouseFilter = MouseFilterMode.Stop
                 };
 
@@ -1196,6 +1309,16 @@ namespace Content.Client.Preferences.UI
                 _requirementsLabel.Visible = false;
                 _lockStripe.Visible = false;
                 _optionButton.Visible = true;
+            }
+
+            private Button GenerateButton(string text, int value)
+            {
+                var btn = new Button
+                {
+                    Text = text,
+                    MinWidth = 90
+                };
+                return btn;
             }
         }
 

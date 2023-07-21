@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Numerics;
 using Content.Shared.CCVar;
 using Content.Shared.CrewManifest;
 using Content.Shared.Roles;
@@ -106,19 +107,11 @@ public sealed partial class CrewManifestUi : DefaultWindow
 
             if (Loc.TryGetString($"department-{sectionTitle}", out var localizedDepart))
                 sectionTitle = localizedDepart;
- 
+
             AddChild(new Label()
             {
                 StyleClasses = { "LabelBig" },
                 Text = Loc.GetString(sectionTitle)
-            });
-
-            entries.Sort((a, b) =>
-            {
-                var posA = crewManifestSystem.GetDepartmentOrder(sectionTitle, a.JobPrototype);
-                var posB = crewManifestSystem.GetDepartmentOrder(sectionTitle, b.JobPrototype);
-
-                return posA.CompareTo(posB);
             });
 
             var gridContainer = new GridContainer()
@@ -129,7 +122,7 @@ public sealed partial class CrewManifestUi : DefaultWindow
 
             AddChild(gridContainer);
 
-            var path = new ResourcePath("/Textures/Interface/Misc/job_icons.rsi");
+            var path = new ResPath("/Textures/Interface/Misc/job_icons.rsi");
             cache.TryGetResource(path, out RSIResource? rsi);
 
             foreach (var entry in entries)
@@ -147,14 +140,14 @@ public sealed partial class CrewManifestUi : DefaultWindow
                 };
 
                 var title = new RichTextLabel();
-                title.SetMessage(Loc.GetString(entry.JobTitle));
+                title.SetMessage(entry.JobTitle);
 
 
                 if (rsi != null)
                 {
                     var icon = new TextureRect()
                     {
-                        TextureScale = (2, 2),
+                        TextureScale = new Vector2(2, 2),
                         Stretch = TextureRect.StretchMode.KeepCentered
                     };
 

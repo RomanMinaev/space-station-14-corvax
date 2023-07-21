@@ -1,8 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Content.Server.NPC.Components;
-using Content.Shared.MobState;
-using Content.Shared.MobState.Components;
+using Content.Shared.Mobs;
+using Content.Shared.Mobs.Components;
 using Robust.Shared.Audio;
 
 namespace Content.Server.NPC.HTN.PrimitiveTasks.Operators.Ranged;
@@ -21,7 +21,7 @@ public sealed class RangedOperator : HTNOperator
     /// Minimum damage state that the target has to be in for us to consider attacking.
     /// </summary>
     [DataField("targetState")]
-    public DamageState TargetState = DamageState.Alive;
+    public MobState TargetState = MobState.Alive;
 
     // Like movement we add a component and pass it off to the dedicated system.
 
@@ -35,7 +35,6 @@ public sealed class RangedOperator : HTNOperator
         }
 
         if (_entManager.TryGetComponent<MobStateComponent>(target, out var mobState) &&
-            mobState.CurrentState != null &&
             mobState.CurrentState > TargetState)
         {
             return (false, null);
@@ -72,13 +71,15 @@ public sealed class RangedOperator : HTNOperator
     {
         base.Update(blackboard, frameTime);
         var owner = blackboard.GetValue<EntityUid>(NPCBlackboard.Owner);
-        var status = HTNOperatorStatus.Continuing;
+        HTNOperatorStatus status;
 
-        if (_entManager.TryGetComponent<NPCRangedCombatComponent>(owner, out var combat))
+        if (_entManager.TryGetComponent<NPCRangedCombatComponent>(owner, out var combat) &&
+            blackboard.TryGetValue<EntityUid>(TargetKey, out var target, _entManager))
         {
+            combat.Target = target;
+
             // Success
             if (_entManager.TryGetComponent<MobStateComponent>(combat.Target, out var mobState) &&
-                mobState.CurrentState != null &&
                 mobState.CurrentState > TargetState)
             {
                 status = HTNOperatorStatus.Finished;
@@ -99,6 +100,10 @@ public sealed class RangedOperator : HTNOperator
                         break;
                 }
             }
+        }
+        else
+        {
+            status = HTNOperatorStatus.Failed;
         }
 
         if (status != HTNOperatorStatus.Continuing)

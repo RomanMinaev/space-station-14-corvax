@@ -6,7 +6,6 @@
   abstract: true
   components:
   - type: Sprite
-    netsync: false
     layers:
       - state: icon
         map: [ "enum.GunVisualLayers.Base" ]
@@ -54,7 +53,6 @@
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/Shotguns/bulldog.rsi
-    netsync: false
     layers:
     - state: base
       map: ["enum.GunVisualLayers.Base"]
@@ -74,7 +72,7 @@
     availableModes:
     - FullAuto
     soundGunshot:
-      path: /Audio/Weapons/Guns/Gunshots/shotgun.ogg
+      path: /Audio/Corvax/Weapons/Guns/Gunshots/shotgun_auto.ogg # Corvax-Guns
     soundEmpty:
       path: /Audio/Weapons/Guns/Empty/empty.ogg
   - type: ItemSlots
@@ -115,7 +113,18 @@
     capacity: 2
   - type: Construction
     graph: ShotgunSawn
-    node: shotgundoublebarreled
+    node: start
+    deconstructionTarget: null
+
+- type: entity
+  name: double-barreled shotgun
+  parent: WeaponShotgunDoubleBarreled
+  id: WeaponShotgunDoubleBarreledRubber
+  description: An immortal classic. Uses .50 shotgun shells.
+  suffix: Non-Lethal
+  components:
+  - type: BallisticAmmoProvider
+    proto: ShellShotgunBeanbag
 
 - type: entity
   name: Enforcer
@@ -128,6 +137,9 @@
   - type: Clothing
     sprite: Objects/Weapons/Guns/Shotguns/enforcer.rsi
   - type: BallisticAmmoProvider
+  - type: Gun # Corvax-Guns
+    soundGunshot:
+      path: /Audio/Corvax/Weapons/Guns/Gunshots/shotgun_metal.ogg
 
 - type: entity
   name: Kammerer
@@ -141,6 +153,9 @@
     sprite: Objects/Weapons/Guns/Shotguns/pump.rsi
   - type: BallisticAmmoProvider
     capacity: 4
+  - type: Gun # Corvax-Guns
+    soundGunshot:
+      path: /Audio/Corvax/Weapons/Guns/Gunshots/shotgun_alt.ogg
 
 - type: entity
   name: sawn-off shotgun
@@ -156,8 +171,62 @@
     size: 10
   - type: Gun
     fireRate: 4
+    soundGunshot: # Corvax-Guns
+      path: /Audio/Corvax/Weapons/Guns/Gunshots/shotgun_sawed.ogg
   - type: BallisticAmmoProvider
     capacity: 2
   - type: Construction
     graph: ShotgunSawn
     node: shotgunsawn
+    deconstructionTarget: null
+
+- type: entity
+  name: sawn-off shogun
+  parent: WeaponShotgunSawn
+  id: WeaponShotgunSawnEmpty
+  description: Groovy! Uses .50 shotgun shells.
+  suffix: Empty
+  components:
+  - type: BallisticAmmoProvider
+    proto: null
+  - type: Construction
+    graph: ShotgunSawn
+    node: shotgunsawn
+    deconstructionTarget: null
+
+- type: entity
+  name: handmade pistol
+  parent: BaseWeaponShotgun
+  id: WeaponShotgunHandmade
+  description: Looks unreliable. Uses .50 shotgun shells.
+  components:
+  - type: Sprite
+    sprite: Objects/Weapons/Guns/Shotguns/hm_pistol.rsi
+  - type: Clothing
+    sprite: Objects/Weapons/Guns/Shotguns/hm_pistol.rsi
+  - type: Item
+    size: 10
+  - type: Gun
+    fireRate: 4
+    soundGunshot: # Corvax-Guns
+      path: /Audio/Corvax/Weapons/Guns/Gunshots/shotgun_pipe.ogg
+  - type: BallisticAmmoProvider
+    capacity: 1
+  - type: Construction
+    graph: ShotgunSawn
+    node: shotgunsawn
+    deconstructionTarget: null
+
+- type: entity
+  name: blunderbuss
+  parent: BaseWeaponShotgun
+  id: WeaponShotgunBlunderbuss
+  suffix: Pirate
+  description: Deadly at close range.
+  components:
+  - type: Sprite
+    sprite: Objects/Weapons/Guns/Shotguns/blunderbuss.rsi
+  - type: Gun
+    fireRate: 2
+  - type: BallisticAmmoProvider
+    capacity: 1

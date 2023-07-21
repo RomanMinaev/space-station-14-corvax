@@ -1,13 +1,17 @@
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.Decals;
 using Content.Shared.Physics;
 using Robust.Shared.Map;
+using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Random;
 
 namespace Content.Shared.Maps
 {
+    // TODO move all these methods to LookupSystem or TurfSystem
+    // That, or make the interface arguments non-optional so people stop failing to pass them in.
     public static class TurfHelpers
     {
         /// <summary>
@@ -36,12 +40,10 @@ namespace Content.Shared.Maps
             if (!coordinates.IsValid(entityManager))
                 return null;
 
-
             mapManager ??= IoCManager.Resolve<IMapManager>();
-
-            if (!mapManager.TryGetGrid(coordinates.GetGridUid(entityManager), out var grid))
+            var pos = coordinates.ToMap(entityManager, entityManager.System<SharedTransformSystem>());
+            if (!mapManager.TryFindGridAt(pos, out _, out var grid))
                 return null;
-
 
             if (!grid.TryGetTileRef(coordinates, out var tile))
                 return null;
@@ -87,94 +89,11 @@ namespace Content.Shared.Maps
             return tile.Tile.IsSpace(tileDefinitionManager);
         }
 
-        public static bool PryTile(this Vector2i indices, EntityUid gridId,
-            IMapManager? mapManager = null, ITileDefinitionManager? tileDefinitionManager = null, IEntityManager? entityManager = null)
-        {
-            mapManager ??= IoCManager.Resolve<IMapManager>();
-            var grid = mapManager.GetGrid(gridId);
-            var tileRef = grid.GetTileRef(indices);
-            return tileRef.PryTile(mapManager, tileDefinitionManager, entityManager);
-        }
-
-        public static bool PryTile(this TileRef tileRef,
-            IMapManager? mapManager = null,
-            ITileDefinitionManager? tileDefinitionManager = null,
-            IEntityManager? entityManager = null,
-            IRobustRandom? robustRandom = null)
-        {
-            var tile = tileRef.Tile;
-
-            // If the arguments are null, resolve the needed dependencies.
-            tileDefinitionManager ??= IoCManager.Resolve<ITileDefinitionManager>();
-
-            if (tile.IsEmpty) return false;
-
-            var tileDef = (ContentTileDefinition) tileDefinitionManager[tile.TypeId];
-
-            if (!tileDef.CanCrowbar) return false;
-
-            return DeconstructTile(tileRef, mapManager, tileDefinitionManager, entityManager, robustRandom);
-        }
-
-        public static bool CutTile(this TileRef tileRef,
-            IMapManager? mapManager = null,
-            ITileDefinitionManager? tileDefinitionManager = null,
-            IEntityManager? entityManager = null,
-            IRobustRandom? robustRandom = null)
-        {
-            var tile = tileRef.Tile;
-
-            // If the arguments are null, resolve the needed dependencies.
-            tileDefinitionManager ??= IoCManager.Resolve<ITileDefinitionManager>();
-
-            if (tile.IsEmpty) return false;
-
-            var tileDef = (ContentTileDefinition) tileDefinitionManager[tile.TypeId];
-
-            if (!tileDef.CanWirecutter) return false;
-
-            return DeconstructTile(tileRef, mapManager, tileDefinitionManager, entityManager, robustRandom);
-        }
-
-        private static bool DeconstructTile(this TileRef tileRef,
-            IMapManager? mapManager = null,
-            ITileDefinitionManager? tileDefinitionManager = null,
-            IEntityManager? entityManager = null,
-            IRobustRandom? robustRandom = null)
-        {
-            var indices = tileRef.GridIndices;
-
-            mapManager ??= IoCManager.Resolve<IMapManager>();
-            tileDefinitionManager ??= IoCManager.Resolve<ITileDefinitionManager>();
-            entityManager ??= IoCManager.Resolve<IEntityManager>();
-            robustRandom ??= IoCManager.Resolve<IRobustRandom>();
-
-            var tileDef = (ContentTileDefinition) tileDefinitionManager[tileRef.Tile.TypeId];
-            var mapGrid = mapManager.GetGrid(tileRef.GridUid);
-
-            const float margin = 0.1f;
-            var bounds = mapGrid.TileSize - margin * 2;
-            var coordinates = mapGrid.GridTileToLocal(indices)
-                .Offset(new Vector2(
-                    (robustRandom.NextFloat() - 0.5f) * bounds,
-                    (robustRandom.NextFloat() - 0.5f) * bounds));
-
-            //Actually spawn the relevant tile item at the right position and give it some random offset.
-            var tileItem = entityManager.SpawnEntity(tileDef.ItemDropPrototypeName, coordinates);
-            entityManager.GetComponent<TransformComponent>(tileItem).LocalRotation
-                = robustRandom.NextDouble() * Math.Tau;
-
-            var plating = tileDefinitionManager[tileDef.BaseTurfs[^1]];
-
-            mapGrid.SetTile(tileRef.GridIndices, new Tile(plating.TileId));
-
-            return true;
-        }
-
         /// <summary>
         ///     Helper that returns all entities in a turf.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Obsolete("Use the lookup system")]
         public static IEnumerable<EntityUid> GetEntitiesInTile(this TileRef turf, LookupFlags flags = LookupFlags.Static, EntityLookupSystem? lookupSystem = null)
         {
             lookupSystem ??= EntitySystem.Get<EntityLookupSystem>();
@@ -188,6 +107,7 @@ namespace Content.Shared.Maps
         /// <summary>
         ///     Helper that returns all entities in a turf.
         /// </summary>
+        [Obsolete("Use the lookup system")]
         public static IEnumerable<EntityUid> GetEntitiesInTile(this EntityCoordinates coordinates, LookupFlags flags = LookupFlags.Static, EntityLookupSystem? lookupSystem = null)
         {
             var turf = coordinates.GetTileRef();
@@ -201,6 +121,7 @@ namespace Content.Shared.Maps
         /// <summary>
         ///     Helper that returns all entities in a turf.
         /// </summary>
+        [Obsolete("Use the lookup system")]
         public static IEnumerable<EntityUid> GetEntitiesInTile(this Vector2i indices, EntityUid gridId, LookupFlags flags = LookupFlags.Static, EntityLookupSystem? lookupSystem = null)
         {
             return GetEntitiesInTile(indices.GetTileRef(gridId), flags, lookupSystem);
@@ -209,42 +130,14 @@ namespace Content.Shared.Maps
         /// <summary>
         /// Checks if a turf has something dense on it.
         /// </summary>
-        public static bool IsBlockedTurf(this TileRef turf, bool filterMobs, EntityLookupSystem? physics = null, IEntitySystemManager? entSysMan = null)
+        [Obsolete("Use turf system")]
+        public static bool IsBlockedTurf(this TileRef turf, bool filterMobs, EntityLookupSystem? physics = null)
         {
-            // TODO: Deprecate this with entitylookup.
-            if (physics == null)
-            {
-                IoCManager.Resolve(ref entSysMan);
-                physics = entSysMan.GetEntitySystem<EntityLookupSystem>();
-            }
+            CollisionGroup mask = filterMobs
+                ? CollisionGroup.MobMask
+                : CollisionGroup.Impassable;
 
-            if (!GetWorldTileBox(turf, out var worldBox))
-                return false;
-
-            var entManager = IoCManager.Resolve<IEntityManager>();
-            var query = physics.GetEntitiesIntersecting(turf.GridUid, worldBox);
-
-            foreach (var ent in query)
-            {
-                // Yes, this can fail. Welp!
-                if (!entManager.TryGetComponent(ent, out PhysicsComponent? body))
-                    continue;
-
-                if (body.CanCollide && body.Hard && (body.CollisionLayer & (int) CollisionGroup.Impassable) != 0)
-                    return true;
-
-                if (filterMobs && (body.CollisionLayer & (int) CollisionGroup.MobMask) != 0)
-                    return true;
-            }
-
-            return false;
-        }
-
-        public static EntityCoordinates GridPosition(this TileRef turf, IMapManager? mapManager = null)
-        {
-            mapManager ??= IoCManager.Resolve<IMapManager>();
-
-            return turf.GridIndices.ToEntityCoordinates(turf.GridUid, mapManager);
+            return IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<TurfSystem>().IsTileBlocked(turf, mask);
         }
 
         /// <summary>

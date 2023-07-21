@@ -6,13 +6,13 @@
   id: RandomHumanoidSpawnerERTLeader
   name: ERT leader
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertleader
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitaryLeader
-      - names_last
+      - NamesFirstMilitaryLeaderCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: RandomHumanoidSpawner
       settings: ERTLeader
 
@@ -20,15 +20,16 @@
   id: ERTLeader
   randomizeName: false
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-leader-name
+      description: ghost-role-information-ert-leader-description
     - type: GhostTakeoverAvailable
-      name: ERT Leader
-      description: Lead a team of specialists to resolve the stations issues.
     - type: Loadout
       prototypes: [ ERTLeaderGear ]
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitaryLeader
-      - names_last
+      - NamesFirstMilitaryLeaderCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
 
 - type: entity
   id: RandomHumanoidSpawnerERTLeaderEVA
@@ -36,7 +37,7 @@
   name: ERT leader
   suffix: EVA
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertleadereva
     - type: RandomHumanoidSpawner
@@ -46,9 +47,10 @@
   id: ERTLeaderEVA
   parent: ERTLeader
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-leader-name
+      description: ghost-role-information-ert-leader-description
     - type: GhostTakeoverAvailable
-      name: ERT Leader
-      description: Lead a team of specialists to resolve the stations issues.
     - type: Loadout
       prototypes: [ ERTLeaderGearEVA ]
 
@@ -59,13 +61,13 @@
   parent: RandomHumanoidSpawnerERTLeader
   name: ERT janitor
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertjanitor
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: RandomHumanoidSpawner
       settings: ERTJanitor
 
@@ -73,13 +75,14 @@
   id: ERTJanitor
   parent: ERTLeader
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-janitor-name
+      description: ghost-role-information-ert-janitor-description
     - type: GhostTakeoverAvailable
-      name: ERT Janitor
-      description: Assist with custodial efforts to resolve the stations issues.
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: Loadout
       prototypes: [ ERTJanitorGear ]
 
@@ -89,7 +92,7 @@
   name: ERT janitor
   suffix: EVA
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertjanitoreva
     - type: RandomHumanoidSpawner
@@ -99,9 +102,10 @@
   id: ERTJanitorEVA
   parent: ERTJanitor
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-janitor-name
+      description: ghost-role-information-ert-janitor-description
     - type: GhostTakeoverAvailable
-      name: ERT Janitor
-      description: Assist with custodial efforts to resolve the stations issues.
     - type: Loadout
       prototypes: [ ERTJanitorGearEVA ]
 
@@ -112,13 +116,13 @@
   parent: RandomHumanoidSpawnerERTLeader
   name: ERT engineer
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertengineer
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: RandomHumanoidSpawner
       settings: ERTEngineer
 
@@ -126,13 +130,14 @@
   id: ERTEngineer
   parent: ERTLeader
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-engineer-name
+      description: ghost-role-information-ert-engineer-description
     - type: GhostTakeoverAvailable
-      name: ERT Engineer
-      description: Assist with engineering efforts to resolve the stations issues.
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: Loadout
       prototypes: [ ERTEngineerGear ]
 
@@ -142,7 +147,7 @@
   name: ERT engineer
   suffix: EVA
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertengineereva
     - type: RandomHumanoidSpawner
@@ -152,9 +157,10 @@
   id: ERTEngineerEVA
   parent: ERTEngineer
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-engineer-name
+      description: ghost-role-information-ert-engineer-description
     - type: GhostTakeoverAvailable
-      name: ERT Engineer
-      description: Assist with engineering efforts to resolve the stations issues.
     - type: Loadout
       prototypes: [ ERTEngineerGearEVA ]
 
@@ -165,13 +171,13 @@
   parent: RandomHumanoidSpawnerERTLeader
   name: ERT security
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertsecurity
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: RandomHumanoidSpawner
       settings: ERTSecurity
 
@@ -179,13 +185,14 @@
   id: ERTSecurity
   parent: ERTLeader
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-security-name
+      description: ghost-role-information-ert-security-description
     - type: GhostTakeoverAvailable
-      name: ERT Security
-      description: Assist with security efforts to resolve the stations issues.
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: Loadout
       prototypes: [ ERTSecurityGear ]
 
@@ -195,7 +202,7 @@
   name: ERT security
   suffix: EVA
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertsecurityeva
     - type: RandomHumanoidSpawner
@@ -205,9 +212,10 @@
   id: ERTSecurityEVA
   parent: ERTSecurity
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-security-name
+      description: ghost-role-information-ert-security-description
     - type: GhostTakeoverAvailable
-      name: ERT Security
-      description: Assist with security efforts to resolve the stations issues.
     - type: Loadout
       prototypes: [ ERTSecurityGearEVA ]
 
@@ -218,13 +226,13 @@
   parent: RandomHumanoidSpawnerERTLeader
   name: ERT medic
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertmedical
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: RandomHumanoidSpawner
       settings: ERTMedical
 
@@ -232,13 +240,14 @@
   id: ERTMedical
   parent: ERTLeader
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-medical-name
+      description: ghost-role-information-ert-medical-description
     - type: GhostTakeoverAvailable
-      name: ERT Medical
-      description: Assist with medicaling efforts to resolve the stations issues.
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
     - type: Loadout
       prototypes: [ ERTMedicalGear ]
 
@@ -248,7 +257,7 @@
   name: ERT medic
   suffix: EVA
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: ertmedicaleva
     - type: RandomHumanoidSpawner
@@ -258,9 +267,10 @@
   id: ERTMedicalEVA
   parent: ERTMedical
   components:
+    - type: GhostRole
+      name: ghost-role-information-ert-medical-name
+      description: ghost-role-information-ert-medical-description
     - type: GhostTakeoverAvailable
-      name: ERT Medical
-      description: Assist with medicaling efforts to resolve the stations issues.
     - type: Loadout
       prototypes: [ ERTMedicalGearEVA ]
 
@@ -270,6 +280,9 @@
   id: RandomHumanoidSpawnerCBURNUnit
   name: CBURN Agent
   components:
+    - type: Sprite
+      sprite: Markers/jobs.rsi
+      state: cburn
     - type: RandomHumanoidSpawner
       settings: CBURNAgent
 
@@ -278,20 +291,21 @@
   components:
     - type: Loadout
       prototypes: [CBURNGear]
+    - type: GhostRole
+      name: ghost-role-information-cburn-agent-name
+      description: ghost-role-information-cburn-agent-description
     - type: GhostTakeoverAvailable
-      name: CBURN Agent
-      description: A highly trained CentCom agent, capable of dealing with various threats.
     - type: RandomMetadata
       nameSegments:
-      - NamesFirstMilitary
-      - names_last
+      - NamesFirstMilitaryCorvax # Corvax-Localization
+      - NamesLastERTCallsign # Corvax-Localization
 ## Central Command
 
 - type: entity
   name: CentCom official
   id: RandomHumanoidSpawnerCentcomOfficial
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Markers/jobs.rsi
       state: centcom
     - type: RandomHumanoidSpawner
@@ -300,9 +314,10 @@
 - type: randomHumanoidSettings
   id: CentcomOfficial
   components:
+    - type: GhostRole
+      name: ghost-role-information-centcom-official-name
+      description: ghost-role-information-centcom-official-description
     - type: GhostTakeoverAvailable
-      name: CentCom official
-      description: Inspect the station, jot down performance reviews for heads of staff, bug the Captain.
     - type: Loadout
       prototypes: [ CentcomGear ]
 
@@ -312,11 +327,11 @@
   id: RandomHumanoidSpawnerSyndicateAgent
   name: Syndicate Agent
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Mobs/Species/Human/parts.rsi
       state: full
     - type: RandomMetadata
-      nameSegments: [ names_death_commando ]
+      nameSegments: [ corvax_names_death_commando ] # Corvax-Localization
     - type: RandomHumanoidSpawner
       settings: SyndicateAgent
 
@@ -330,7 +345,7 @@
   id: RandomHumanoidSpawnerNukeOp
   name: Nuclear Operative
   components:
-    - type: Icon
+    - type: Sprite
       sprite: Mobs/Species/Human/parts.rsi
       state: full
     - type: RandomHumanoidSpawner
@@ -340,3 +355,29 @@
   id: NukeOp
   components:
     - type: NukeOperative
+
+- type: entity
+  id: RandomHumanoidSpawnerCluwne
+  name: Cluwne
+  suffix: spawns a cluwne
+  components:
+    - type: Sprite
+      sprite: Markers/jobs.rsi
+      state: cluwne
+    - type: RandomHumanoidSpawner
+      settings: Cluwne
+    - type: RandomMetadata
+      nameSegments:
+      - names_first
+      - names_last
+
+
+- type: randomHumanoidSettings
+  id: Cluwne
+  randomizeName: false
+  components:
+    - type: GhostRole
+      name: ghost-role-information-cluwne-name
+      description: ghost-role-information-cluwne-description
+    - type: GhostTakeoverAvailable
+    - type: Cluwne

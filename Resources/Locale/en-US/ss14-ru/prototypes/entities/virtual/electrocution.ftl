@@ -1,9 +1,8 @@
-ent-VirtualElectrocutionLoadHVPower = ELECTROCUTION ENTITY YOU SHOULD NOT SEE THIS
+ent-VirtualElectrocutionLoadBase = { "" }
     .desc = { "" }
-    .suffix = { "" }
-ent-VirtualElectrocutionLoadMVPower = ELECTROCUTION ENTITY YOU SHOULD NOT SEE THIS
-    .desc = { "" }
-    .suffix = { "" }
-ent-VirtualElectrocutionLoadApc = ELECTROCUTION ENTITY YOU SHOULD NOT SEE THIS
-    .desc = { "" }
-    .suffix = { "" }
+ent-VirtualElectrocutionLoadHVPower = { ent-VirtualElectrocutionLoadBase }
+    .desc = { ent-VirtualElectrocutionLoadBase.desc }
+ent-VirtualElectrocutionLoadMVPower = { ent-VirtualElectrocutionLoadBase }
+    .desc = { ent-VirtualElectrocutionLoadBase.desc }
+ent-VirtualElectrocutionLoadApc = { ent-VirtualElectrocutionLoadBase }
+    .desc = { ent-VirtualElectrocutionLoadBase.desc }
